@@ -22,8 +22,6 @@ set -o nounset
 readonly DR_CFG_FILE="/etc/dr/dr.cfg"
 
 # Global constants.
-readonly DRBINPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 readonly SERVICECFGFILE="service.cfg"
 readonly SERVICEBINDIR="bin"
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
@@ -144,7 +142,11 @@ function getUSERID {
 
 # checkimage 
 function checkimage {
-   docker run --rm -v "${DRBINPATH}/validator:/validator" "${IMAGENAME}" /bin/bash -c "/validator/validate"
+   VALIDATORPATH="${DRBINPATH}/validator"
+   if [ ! -e "${VALIDATORPATH}/validate" ]; then
+      die "Missing dr file: ${VALIDATORPATH}/validate"
+   fi
+   docker run --rm -v "${VALIDATORPATH}:/validator" "${IMAGENAME}" /bin/bash -c "/validator/validate"
    if [ "$?" -ne 0 ]; then 
       die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
    fi
