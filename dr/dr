@@ -25,6 +25,7 @@ readonly DR_CFG_FILE="/etc/dr/dr.cfg"
 readonly DRBINPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly SERVICECFGFILE="service.cfg"
+readonly SERVICEBINDIR="bin"
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" )
 readonly COPYIMAGE="j842/dr-baseimage-alpine"
 
