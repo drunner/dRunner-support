@@ -24,7 +24,8 @@ if [ $? -ne 0 ]; then die "dr_compress: Couldn't find destination path ${2}." ; 
 
 ARCHIVEPATH="$ARCHIVEFOLDER/$3"
 
-if [ -n "$PASS" ]; then 
+# default to empty string if doesn't exist, then test for empty string.
+if [ -n "${PASS-}" ]; then 
    PASSCMD="-p${PASS}"; 
 else
    PASSCMD=""

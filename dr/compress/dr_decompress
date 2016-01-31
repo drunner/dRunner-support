@@ -23,7 +23,7 @@ if [ ! -e "$ARCHIVEPATH" ]; then die "dr_decompress: No such archive: $ARCHIVEPA
 if [ ! -d "$DESTFOLDER" ]; then die "dr_decompress: Destination folder does not exist: $DESTFOLDER"; fi
  
 PASSCMD=""
-if [ -n "$PASS" ]; then 
+if [ -n "${PASS-}" ]; then 
    PASSCMD="-p${PASS}"; 
 fi
 
