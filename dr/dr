@@ -31,14 +31,6 @@ readonly COPYIMAGE="j842/dr-baseimage-alpine"
 readonly BACKUP_HOSTZIP="config_host.tar.7z"
 readonly BACKUP_VOLZIP="config_volume_container.tar.7z"
 readonly BACKUP_MAIN="backup.tar.7z"
-   
-# Global variables
-SERVICENAME=""
-DIRECTORY=""  
-DIRSERVICE=""
-IMAGENAME=""
-
-
 
 #------------------------------------------------------------------------------------
 
@@ -64,11 +56,11 @@ function checkdir {
 }
 
 function initglobals {
-   # defines $DIRECTORY  $DRSERVICESPATH  $SUPPORTIMAGE
+   # defines $ROOTPATH  $DRSERVICESPATH  $SUPPORTIMAGE
    . "${DR_CFG_FILE}"
    
    # Check basic directories are okay
-   checkdir "${DIRECTORY}" "DIRECTORY"
+   checkdir "${ROOTPATH}" "ROOTPATH"
    checkdir "${DRSERVICESPATH}" "DRSERVICESPATH"
 }
 
@@ -147,17 +139,17 @@ function command_exists { command -v "$1" >/dev/null 2>&1 ; }
 
 # configure
 function configure {
-   if [ -z $DIRECTORY ]; then echo "dr configure requires directory argument.">&2 ; exit 1 ; fi
+   if [ -z $ROOTPATH ]; then echo "dr configure requires ROOTPATH argument.">&2 ; exit 1 ; fi
    mkdir -p "$DRETCPATH"   # ensure directrory exists.   
-   echo "$DIRECTORY" > "${CFG_DIRECTORY}"
+   echo "$ROOTPATH" > "${CFG_ROOTPATH}"
    
    # set up standard docker user and group for containers.
    groupadd -g 22022 "$DRGROUP"
    adduser --disabled-password --gecos '' -u 22022 --gid 22022 "$DRUSER"
 
-   mkdir -p "$DIRECTORY"   # ensure directrory exists.
+   mkdir -p "$ROOTPATH"   # ensure directrory exists.
    
-   echo "Configuration complete: created druser and set up $DIRECTORY." >&2
+   echo "Configuration complete: created druser and set up $ROOTPATH." >&2
 }
 
 #------------------------------------------------------------------------------------
@@ -193,8 +185,8 @@ EOF
 
 # copydrfiles
 function copydrfiles {
-   # the directory that the container will update.
-   local DRBINPATH="${DIRSERVICE}/${DRBINDIR}"
+   # the ROOTPATH that the container will update.
+   local DRBINPATH="${SERVICEPATH}/${SERVICEBINDIR}"
    if [ -d "${DRBINPATH}" ]; then
       rm -r "${DRBINPATH}"
    fi
@@ -206,7 +198,7 @@ function copydrfiles {
    if [ $? -ne 0 ]; then 
       echo "Failed to copy files.">&2 
       echo "You will need to reinstall the service.">&2
-      rm -r "${DIRSERVICE}"
+      rm -r "${SERVICEPATH}"
       exit 1
    fi  
    chown -R root:root "${DRBINPATH}"
@@ -216,10 +208,10 @@ function copydrfiles {
 #------------------------------------------------------------------------------------
 
 # initdrservice
-function initdirservice {
-   # can only call when service directory not present (for safety)
-   if [ -d ${DIRSERVICE} ]; then
-      echo "A service is already installed at ${DIRSERVICE}. Initialisation cancelled.">&2
+function initSERVICEPATH {
+   # can only call when service ROOTPATH not present (for safety)
+   if [ -d ${SERVICEPATH} ]; then
+      echo "A service is already installed at ${SERVICEPATH}. Initialisation cancelled.">&2
       echo "You might want   dr update ${SERVICENAME}  instead.">&2
       exit 1
    fi
@@ -227,15 +219,15 @@ function initdirservice {
    copydrfiles
 
    # add standard dr config stuff.
-   mkdir -p "${DIRSERVICE}/${DRCFGDIR}"
-   echo "${IMAGENAME}" > "${DIRSERVICE}/${CFG_IMAGENAME}"
-   echo "${SERVICENAME}" > "${DIRSERVICE}/${CFG_SERVICENAME}" 
+   mkdir -p "${SERVICEPATH}/${DRCFGDIR}"
+   echo "${IMAGENAME}" > "${SERVICEPATH}/${CFG_IMAGENAME}"
+   echo "${SERVICENAME}" > "${SERVICEPATH}/${CFG_SERVICENAME}" 
 
    # Check mandatory files made it over to host okay from the container.
    for HFILE in "${REQDFILES[@]}"; do
-      if [ ! -e "${DIRSERVICE}/${DRBINDIR}/${HFILE}" ]; then 
+      if [ ! -e "${SERVICEPATH}/${SERVICEBINDIR}/${HFILE}" ]; then 
          echo "Install failed - ${HFILE} is required" 
-         rm -r "${DIRSERVICE}"
+         rm -r "${SERVICEPATH}"
          exit 1
       fi
    done
@@ -253,7 +245,7 @@ function install {
    local DNAME="dr-install"
 
    # --- all four globals have been set.
-   initdirservice
+   initSERVICEPATH
    
    # create the standard config volume container.
    docker volume create --name="dr-${SERVICENAME}-config" >/dev/null
@@ -263,7 +255,7 @@ function install {
     
    # Run the install script, e.g. to create volume containers.
    # todo: tidy up return/exit codes!         
-   bash "${DIRSERVICE}/${DRBINDIR}/install" "${SERVICENAME}" "${IMAGENAME}"
+   bash "${SERVICEPATH}/${SERVICEBINDIR}/install" "${SERVICENAME}" "${IMAGENAME}"
    
    # allow direct execution of SERVICENAME without typing dr
    createlaunchscript
@@ -277,14 +269,14 @@ function install {
 # destroy
 function destroy {
    if [ -z $SERVICENAME ]; then die "dr destroy requires SERVICENAME to be set." ; fi
-   if [ ! -d "$DIRSERVICE" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
+   if [ ! -d "$SERVICEPATH" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
    
    local RVALD=0
 
    # if the install process created a destroy script then run it, e.g. to destroy volume containers.
    # todo: tidy up return/exit codes!         
-   if [ -e "${DIRSERVICE}/${DRBINDIR}/destroy" ]; then
-      bash "${DIRSERVICE}/${DRBINDIR}/destroy" "${SERVICENAME}" "${IMAGENAME}"
+   if [ -e "${SERVICEPATH}/${SERVICEBINDIR}/destroy" ]; then
+      bash "${SERVICEPATH}/${SERVICEBINDIR}/destroy" "${SERVICENAME}" "${IMAGENAME}"
    else 
       RVALD=1
    fi      
@@ -295,8 +287,8 @@ function destroy {
    # remove launch script
    if [ -e "/usr/local/bin/${SERVICENAME}" ]; then rm "/usr/local/bin/${SERVICENAME}" ; fi
    
-   # clean up service directory.
-   rm -r "${DIRSERVICE}"
+   # clean up service ROOTPATH.
+   rm -r "${SERVICEPATH}"
    
    exit $RVALD
 }
@@ -380,14 +372,14 @@ function backup {
    # for convenience, stick teh imagename in the tempparent folder
    echo "${IMAGENAME}" > "$TEMPPARENT/imagename.txt"
    
-   # back up our configuration directory.
-   compress "$DIRSERVICE/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
+   # back up our configuration ROOTPATH.
+   compress "$SERVICEPATH/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
    
    # back up our volume container (dr-${SERVICENAME}-config).
    compressvolume "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
    
    # call through to container to backup anything there in a subfolder.
-   SCRIPTTORUN="${DIRSERVICE}/${DRBINDIR}/backup"
+   SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/backup"
    bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
       
    # Compress everything with password
@@ -407,7 +399,7 @@ function restore {
    if [ -z "$1" ]; then die "No BACKUPFILE was specified." ; fi
    local BACKUPFILE=$(realpath "$1" | tr -d '\r\n')
    if [ ! -e "$BACKUPFILE" ]; then die "$BACKUPFILE doesn't exist. Aborting." ; fi
-   if [ -e "$DIRSERVICE" ]; then die "$SERVICENAME exists - destroy it before restoring from backup." ; fi
+   if [ -e "$SERVICEPATH" ]; then die "$SERVICENAME exists - destroy it before restoring from backup." ; fi
    
    local TEMPROOT="$(mktemp -d)"
    local TEMPPARENT="${TEMPROOT}/backup"
@@ -436,12 +428,12 @@ function restore {
    decompressvolume "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
 
    # restore our configuration, first removing the one install just created.
-   rm -r "${DIRSERVICE}/${DRCFGDIR}"
-   mkdir "${DIRSERVICE}/${DRCFGDIR}"
-   decompress "${DIRSERVICE}/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
+   rm -r "${SERVICEPATH}/${DRCFGDIR}"
+   mkdir "${SERVICEPATH}/${DRCFGDIR}"
+   decompress "${SERVICEPATH}/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
    
    # call through to container to restore anything there.
-   SCRIPTTORUN="${DIRSERVICE}/${DRBINDIR}/restore"
+   SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/restore"
    bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
    
    echo "Service ${SERVICENAME} has been restored successfully."
@@ -450,13 +442,13 @@ function restore {
 #------------------------------------------------------------------------------------
 
 
-# retriveDIRECTORY
-function retrieveDIRECTORY {
-   DIRERR="Run   dr configure DIRECTORY   before any other commands."
+# retriveROOTPATH
+function retrieveROOTPATH {
+   DIRERR="Run   dr configure ROOTPATH   before any other commands."
    if [ ! -d "$DRETCDIR" ]; then die "$DIRERR"; fi
-   DIRECTORY=$(<"${CFG_DIRECTORY}")
-   if [ -z "$DIRECTORY" ]; then die "$DIRERR"; fi
-   if [ ! -d "$DIRECTORY" ]; then die "$DIRERR"; fi
+   ROOTPATH=$(<"${CFG_ROOTPATH}")
+   if [ -z "$ROOTPATH" ]; then die "$DIRERR"; fi
+   if [ ! -d "$ROOTPATH" ]; then die "$DIRERR"; fi
 }
 
 #------------------------------------------------------------------------------------
@@ -467,13 +459,13 @@ function setglobals {
    if [ -z "${SERVICENAME}" ]; then 
       die "SERVICENAME has not been set." 
    fi
-   retrieveDIRECTORY
+   retrieveROOTPATH
 
-   DIRSERVICE="${DIRECTORY}/${SERVICENAME}"
-   if [ ! -d "$DIRSERVICE" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
+   SERVICEPATH="${ROOTPATH}/${SERVICENAME}"
+   if [ ! -d "$SERVICEPATH" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
 
-   if [ ! -e "${DIRSERVICE}/${CFG_IMAGENAME}" ]; then die "Error - ${CFG_IMAGENAME} doesn't exist."; fi
-   IMAGENAME=$(<"${DIRSERVICE}/${CFG_IMAGENAME}")
+   if [ ! -e "${SERVICEPATH}/${CFG_IMAGENAME}" ]; then die "Error - ${CFG_IMAGENAME} doesn't exist."; fi
+   IMAGENAME=$(<"${SERVICEPATH}/${CFG_IMAGENAME}")
    if [ -z "$IMAGENAME" ]; then die "Error - ${CFG_IMAGENAME} is empty." ; fi
 }
 
@@ -485,123 +477,144 @@ function setglobals {
 # ██║╚██╔╝██║██╔══██║██║██║╚██╗██║
 # ██║ ╚═╝ ██║██║  ██║██║██║ ╚████║
 # ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
-                                
 
-if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
-if ! command_exists docker ; then die "Requires docker to be installed." ; fi
-if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
+function main {                                
 
-# Check basic commands are available
-COMMANDS=(gpg wget md5sum 7z 7za)
-for NEEDEDCMD in "${COMMANDS[@]}"; do
-  if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
-done
+   if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
+   if ! command_exists docker ; then die "Requires docker to be installed." ; fi
+   if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
 
-# defines $DIRECTORY  $DRSERVICESPATH  $SUPPORTIMAGE
-initglobals
+   # Check basic commands are available
+   COMMANDS=(gpg wget md5sum 7z 7za)
+   for NEEDEDCMD in "${COMMANDS[@]}"; do
+   if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
+   done
 
-# check special commands with no SERVICENAME needed
-if [ "$#" -eq 0 ]; then 
-   showusage
-   showservices
-   exit 0
-elif [ "$1" -eq "clean" ]; then
-   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
-   exit 0
-elif [ "$1" -eq "list" ]; then
-   showservices 
-   exit 0
-fi     
+   # defines $ROOTPATH  $DRSERVICESPATH  $SUPPORTIMAGE
+   initglobals
 
-# all other commands have SERVICENAME as first argument.
+   # check special commands with no SERVICENAME needed
+   if [ "$#" -eq 0 ]; then 
+      showusage
+      showservices
+      exit 0
+   elif [ "$1" -eq "clean" ]; then
+      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
+      exit 0
+   elif [ "$1" -eq "list" ]; then
+      showservices 
+      exit 0
+   fi     
 
+   # all other commands have SERVICENAME as first argument.
+   SERVICENAME="$1" ; shift
+   SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
+   SERVICECFGPATH="${SERVICEPATH}/${SERVICECFGFILE}"
 
+   # read in SERVICEIMAGENAME from config file if present.
+   if [ -e "$SERVICECFGPATH" ]; then
+      . "$SERVICECFGPATH"
+      IMAGENAME="$SERVICEIMAGENAME"
+   fi
 
-
-CMD="$1" ; shift
-
-case "$CMD" in
-   configure)
-      if [ "$1" ]; then
-         DIRECTORY="$1"
-         configure
+   # dr SERVICE with no other params.
+   if [ "$#" -eq 1 ]; then
+      if [ -e "$SERVICECFGPATH" ]; then
+         bash "${SERVICEPATH}/${SERVICEBINDIR}/help" "${SERVICENAME}" "${IMAGENAME}"
+         exit 0
       else
-         dieusage "dr configure DIRECTORY"
+         die "Service ${SERVICENAME} does not exist."
       fi
-      ;;
+   fi
 
-   install)
-      if [ "$1" ] && [ "$2" ]; then
-         IMAGENAME="$1"
-         SERVICENAME="$2"
-         retrieveDIRECTORY
-         DIRSERVICE="${DIRECTORY}/${SERVICENAME}"
-         install
-      else
-         dieusage "dr install IMAGENAME SERVICENAME"
-      fi
-      ;;
+
+   # CMD="$1" ; shift
+
+   # case "$CMD" in
+   #    configure)
+   #       if [ "$1" ]; then
+   #          ROOTPATH="$1"
+   #          configure
+   #       else
+   #          dieusage "dr configure ROOTPATH"
+   #       fi
+   #       ;;
+
+   #    install)
+   #       if [ "$1" ] && [ "$2" ]; then
+   #          IMAGENAME="$1"
+   #          SERVICENAME="$2"
+   #          retrieveROOTPATH
+   #          SERVICEPATH="${ROOTPATH}/${SERVICENAME}"
+   #          install
+   #       else
+   #          dieusage "dr install IMAGENAME SERVICENAME"
+   #       fi
+   #       ;;
+         
+   #    update)
+   #       if [ "$1" ]; then
+   #          SERVICENAME="$1"
+   #          setglobals
+   #          copydrfiles
+   #       else
+   #          dieusage "dr update SERVICENAME"
+   #       fi         
+   #       ;;
+         
+   #    # dr backup SERVICENAME BACKUPFILE
+   #    backup)
+   #       if [ "$1" ] && [ "$2" ]; then
+   #          SERVICENAME="$1"
+   #          setglobals
+   #          backup "$2"
+   #       else
+   #          dieusage "[PASS=?] dr backup SERVICENAME BACKUPFILE"
+   #       fi
+   #       ;;
       
-   update)
-      if [ "$1" ]; then
-         SERVICENAME="$1"
-         setglobals
-         copydrfiles
-      else
-         dieusage "dr update SERVICENAME"
-      fi         
-      ;;
+   #    # dr restore SERVICENAME BACKUPFILE
+   #    restore)
+   #       if [ "$1" ] && [ "$2" ]; then
+   #          SERVICENAME="$1"
+   #          retrieveROOTPATH
+   #          SERVICEPATH="${ROOTPATH}/${SERVICENAME}"
+   #          restore "$2"
+   #       else
+   #          dieusage "[PASS=?] dr restore SERVICENAME BACKUPFILE"
+   #       fi
+   #       ;;
       
-   # dr backup SERVICENAME BACKUPFILE
-   backup)
-      if [ "$1" ] && [ "$2" ]; then
-         SERVICENAME="$1"
-         setglobals
-         backup "$2"
-      else
-         dieusage "[PASS=?] dr backup SERVICENAME BACKUPFILE"
-      fi
-      ;;
-     
-   # dr restore SERVICENAME BACKUPFILE
-   restore)
-      if [ "$1" ] && [ "$2" ]; then
-         SERVICENAME="$1"
-         retrieveDIRECTORY
-         DIRSERVICE="${DIRECTORY}/${SERVICENAME}"
-         restore "$2"
-      else
-         dieusage "[PASS=?] dr restore SERVICENAME BACKUPFILE"
-      fi
-      ;;
-     
-   #--------------------------         
+   #    #--------------------------         
+         
+   #    destroy)
+   #       if [ "$1" ]; then
+   #          SERVICENAME="$1" ; shift
+   #          setglobals
+   #          destroy 
+   #       else
+   #          dieusage "dr destroy SERVICENAME"
+   #       fi
+   #       ;;
+         
       
-   destroy)
-      if [ "$1" ]; then
-         SERVICENAME="$1" ; shift
-         setglobals
-         destroy 
-      else
-         dieusage "dr destroy SERVICENAME"
-      fi
-      ;;
-      
-   
-   *)
-      # check if CMD matches a service. If so run the appropriate script.
-      # format:   dr SERVICENAME COMMAND ARGS
-      SERVICENAME="$CMD"
-      setglobals
-      
-      SUBCOMMAND="$1" ; shift
-      SCRIPTTORUN="${DIRSERVICE}/${DRBINDIR}/${SUBCOMMAND}"
-      if [ -n "$SUBCOMMAND" ] && [ -e "${SCRIPTTORUN}" ]; then
-         bash "${SCRIPTTORUN}" "${SERVICENAME}" "${IMAGENAME}" "$@"
-      else
-         bash "${DIRSERVICE}/${DRBINDIR}/help" "${SERVICENAME}" "${IMAGENAME}"
-      fi
-      ;;
-esac
+   #    *)
+   #       # check if CMD matches a service. If so run the appropriate script.
+   #       # format:   dr SERVICENAME COMMAND ARGS
+   #       SERVICENAME="$CMD"
+   #       setglobals
+         
+   #       SUBCOMMAND="$1" ; shift
+   #       SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/${SUBCOMMAND}"
+   #       if [ -n "$SUBCOMMAND" ] && [ -e "${SCRIPTTORUN}" ]; then
+   #          bash "${SCRIPTTORUN}" "${SERVICENAME}" "${IMAGENAME}" "$@"
+   #       else
+   #          bash "${SERVICEPATH}/${SERVICEBINDIR}/help" "${SERVICENAME}" "${IMAGENAME}"
+   #       fi
+   #       ;;
+   # esac
+
+}
 
 
+main "$@"
