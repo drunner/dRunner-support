@@ -5,7 +5,7 @@ MAINTAINER j842
 
 # add in the assets.
 ADD ["./dr","/dr"]
-ADD ["./usrlocalbin","/usr/local/bin/"]
+#ADD ["./usrlocalbin","/usr/local/bin/"]
 RUN chmod a+rx -R /usr/local/bin  &&  chmod a-w -R /dr
 
 # lock in druser.
