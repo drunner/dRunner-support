@@ -238,6 +238,7 @@ EOF
 #------------------------------------------------------------------------------------
 
 # install
+# global variables ready: ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, SERVICENAME, SERVICEPATH, SERVICECFGPATH, IMAGENAME
 function install {   
    if [ -z "$IMAGENAME" ]; then echo "dr install requires IMAGENAME.">&2 ; exit 1 ; fi
    if [ -z "$SERVICENAME" ]; then echo "dr install requires SERVICENAME.">&2 ; exit 1 ; fi
@@ -270,6 +271,7 @@ function install {
 #------------------------------------------------------------------------------------
 
 # destroy
+# global variables ready: ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, SERVICENAME, SERVICEPATH, SERVICECFGPATH, IMAGENAME
 function destroy {
    if [ -z "$SERVICENAME" ]; then die "dr destroy requires SERVICENAME to be set." ; fi
    if [ ! -d "$SERVICEPATH" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
@@ -507,7 +509,7 @@ function main {
    if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
    done
 
-   # defines $ROOTPATH  $DRSERVICESPATH  $SUPPORTIMAGE
+   # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE
    initglobals
 
    # check special commands with no SERVICENAME needed
@@ -563,6 +565,11 @@ function main {
       update)
          copydrfiles
          ;;
+         
+      destroy)
+         destroy 
+         ;;         
+         
 
       *)         
          SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/${USERCOMMAND}"
@@ -600,16 +607,7 @@ function main {
    #       ;;
       
    #    #--------------------------         
-         
-   #    destroy)
-   #       if [ "$1" ]; then
-   #          SERVICENAME="$1" ; shift
-   #          setglobals
-   #          destroy 
-   #       else
-   #          dieusage "dr destroy SERVICENAME"
-   #       fi
-   #       ;;
+
          
 
 }
