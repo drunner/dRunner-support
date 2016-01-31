@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗ 
+# ██║   ██║██╔══██╗██║     ██║██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗
+# ██║   ██║███████║██║     ██║██║  ██║███████║   ██║   ██║   ██║██████╔╝
+# ╚██╗ ██╔╝██╔══██║██║     ██║██║  ██║██╔══██║   ██║   ██║   ██║██╔══██╗
+#  ╚████╔╝ ██║  ██║███████╗██║██████╔╝██║  ██║   ██║   ╚██████╔╝██║  ██║
+#   ╚═══╝  ╚═╝  ╚═╝╚══════╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+                                                                      
+
+# Validate the image I'm running in as being Docker Runner compatible
+
+function die {
+   echo "Not Docker Runner compatible - $1">&2
+   exit 1   
+}
+
+if [ "$UID" -eq 0 ]; then 
+   die "the container runs as root." 
+fi
+
+# Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
+readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
+for CFILE in "${REQDFILES[@]}"; do
+   if [ ! -e "/dr/$CFILE" ]; then
+      die "required file not present: /dr/$CFILE"
+   fi
+done
+
+exit 0
+
+

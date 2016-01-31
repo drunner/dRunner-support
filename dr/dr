@@ -26,7 +26,7 @@ readonly DRBINPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly SERVICECFGFILE="service.cfg"
 readonly SERVICEBINDIR="bin"
-readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" )
+readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
 readonly COPYIMAGE="j842/dr-baseimage-alpine"
 
 readonly BACKUP_HOSTZIP="config_host.tar.7z"
@@ -144,19 +144,10 @@ function getUSERID {
 
 # checkimage 
 function checkimage {
-   # check image exists.
-   docker run --rm ${IMAGENAME} true
-   if [ "$?" -ne 0 ]; then echo " ">&2 ; die "The Docker image ${IMAGENAME} wasn't successfully started - try building or pulling it first." ; fi
-   
-   # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
-   for CFILE in "${REQDFILES[@]}"; do
-      docker run --rm -it "${IMAGENAME}" /bin/bash -c "command -v /dr/$CFILE >/dev/null 2>&1"
-      if [ "$?" -ne 0 ]; then echo "${IMAGENAME} is not Docker Runner compatible. The script /dr/${CFILE} is missing.">&2 ; exit 1 ; fi
-   done
-   
-   # Check not running as root.
-   getUSERID
-   if [ "$USERID" = "0" ]; then die "${IMAGENAME} is not Docker Runner compatible. Running as root user.">&2 ; fi   
+   docker run --rm -v "${DRBINPATH}/validator:/validator" "${IMAGENAME}" /bin/bash -c "/validator/validate"
+   if [ "$?" -ne 0 ]; then 
+      die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
+   fi
    
    echo "${IMAGENAME} is dr compatible.">&2
 }
