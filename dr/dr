@@ -135,19 +135,9 @@ function command_exists { command -v "$1" >/dev/null 2>&1 ; }
 
 #------------------------------------------------------------------------------------
 
-# configure
-function configure {
-   if [ -z "$ROOTPATH" ]; then echo "dr configure requires ROOTPATH argument.">&2 ; exit 1 ; fi
-   mkdir -p "$DRETCPATH"   # ensure directrory exists.   
-   echo "$ROOTPATH" > "${CFG_ROOTPATH}"
-   
-   # set up standard docker user and group for containers.
-   groupadd -g 22022 "$DRGROUP"
-   adduser --disabled-password --gecos '' -u 22022 --gid 22022 "$DRUSER"
-
-   mkdir -p "$ROOTPATH"   # ensure directrory exists.
-   
-   echo "Configuration complete: created druser and set up $ROOTPATH." >&2
+# getUSERID
+function getUSERID {
+   USERID=$(docker run --rm -it "${IMAGENAME}" /bin/bash -c "id -u | tr -d '\r\n'")
 }
 
 #------------------------------------------------------------------------------------
@@ -160,9 +150,9 @@ function checkimage {
       if [ "$?" -ne 0 ]; then echo "${IMAGENAME} is not Docker Runner compatible. The script /dr/${CFILE} is missing.">&2 ; exit 1 ; fi
    done
    
-   # Check running as druser.
-   USERID=$(docker run --rm -it "${IMAGENAME}" /bin/bash -c "id -u | tr -d '\r\n'")
-   if [ "$USERID" != "22022" ]; then echo "${IMAGENAME} is not Docker Runner compatible. Not running as druser (uid 22022). It's >>$USERID<<">&2 ; exit 1 ; fi   
+   # Check not running as root.
+   getUSERID
+   if [ "$USERID" = "0" ]; then die "${IMAGENAME} is not Docker Runner compatible. Running as root user.">&2 ; fi   
    
    echo "${IMAGENAME} is dr compatible.">&2
 }
@@ -183,22 +173,24 @@ EOF
 
 # copydrfiles
 function copydrfiles {
-   # the ROOTPATH that the container will update.
+   # Check USERID retrieved from image by calling routine
+   if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
+   
+   # the directory that the container will update.
    local DRBINPATH="${SERVICEPATH}/${SERVICEBINDIR}"
-   if [ -d "${DRBINPATH}" ]; then
-      rm -r "${DRBINPATH}"
-   fi
+   if [ -d "${DRBINPATH}" ]; then rm -r "${DRBINPATH}" fi
    mkdir -p "${DRBINPATH}"
-   chown "${DRUSER}:${DRGROUP}" "${DRBINPATH}"
+   chown "${USERID}:root" "${DRBINPATH}"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
-   docker run --rm -it -v "${DRBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -a /dr/* /tempcopy/"                             
+   docker run --rm -it -v "${DRBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /dr/* /tempcopy/"                             
    if [ $? -ne 0 ]; then 
       echo "Failed to copy files.">&2 
       echo "You will need to reinstall the service.">&2
       rm -r "${SERVICEPATH}"
       exit 1
    fi  
+   # tighten up permissions
    chown -R root:root "${DRBINPATH}"
    chmod -R a-w "${DRBINPATH}"
 }
@@ -210,21 +202,26 @@ function initSERVICEPATH {
    # can only call when service ROOTPATH not present (for safety)
    if [ -d "${SERVICEPATH}" ]; then
       echo "A service is already installed at ${SERVICEPATH}. Initialisation cancelled.">&2
-      echo "You might want   dr update ${SERVICENAME}  instead.">&2
+      echo "You might want   dr ${SERVICENAME} update  instead.">&2
       exit 1
    fi
 
    copydrfiles
 
    # add standard dr config stuff.
-   mkdir -p "${SERVICEPATH}/${DRCFGDIR}"
-   echo "${IMAGENAME}" > "${SERVICEPATH}/${CFG_IMAGENAME}"
-   echo "${SERVICENAME}" > "${SERVICEPATH}/${CFG_SERVICENAME}" 
+   local DATESTAMP="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
+   
+   cat <<EOF >"${SERVICECFGPATH}"
+# Docker Runner configuration file for ${SERVICE} - ${IMAGENAME}
+# Last modified ${DATESTAMP}
+
+SERVICEIMAGENAME=${IMAGENAME}
+EOF
 
    # Check mandatory files made it over to host okay from the container.
    for HFILE in "${REQDFILES[@]}"; do
       if [ ! -e "${SERVICEPATH}/${SERVICEBINDIR}/${HFILE}" ]; then 
-         echo "Install failed - ${HFILE} is required" 
+         echo "Install failed - ${HFILE} is required but wasn't copied from image ${IMAGE}." 
          rm -r "${SERVICEPATH}"
          exit 1
       fi
@@ -248,7 +245,8 @@ function install {
    # create the standard config volume container.
    docker volume create --name="dr-${SERVICENAME}-config" >/dev/null
    # set permissions on config volume
-   docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" /bin/bash -c "chown druser:drgroup /config && date >> /config/install_date"
+   docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
+      /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
    docker rm "$DNAME" >/dev/null 
     
    # Run the install script, e.g. to create volume containers.
