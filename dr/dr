@@ -283,6 +283,7 @@ function destroy {
    if [ -e "${SERVICEPATH}/${SERVICEBINDIR}/destroy" ]; then
       bash "${SERVICEPATH}/${SERVICEBINDIR}/destroy" "${SERVICENAME}" "${IMAGENAME}"
    else 
+      echo "Missing destroy script: ${SERVICEPATH}/${SERVICEBINDIR}/destroy" >&2
       RVALD=1
    fi      
    
@@ -292,7 +293,7 @@ function destroy {
    # remove launch script
    if [ -e "/usr/local/bin/${SERVICENAME}" ]; then rm "/usr/local/bin/${SERVICENAME}" ; fi
    
-   # clean up service ROOTPATH.
+   # clean up service directoy.
    rm -r "${SERVICEPATH}"
    
    exit $RVALD
