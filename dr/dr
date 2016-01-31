@@ -172,14 +172,17 @@ EOF
 #------------------------------------------------------------------------------------
 
 # copydrfiles
-function copydrfiles {
-   # Check USERID retrieved from image by calling routine
-   if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
-   
+function copydrfiles {   
    # the directory that the container will update.
    local DRBINPATH="${SERVICEPATH}/${SERVICEBINDIR}"
-   if [ -d "${DRBINPATH}" ]; then rm -r "${DRBINPATH}" fi
+   if [ -d "${DRBINPATH}" ]; then rm -r "${DRBINPATH}" ; fi
    mkdir -p "${DRBINPATH}"
+
+   # we need the user id for the account that the image uses.
+   getUSERID
+   if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
+
+   # allow the container to write into this folder.
    chown "${USERID}:root" "${DRBINPATH}"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
@@ -520,12 +523,6 @@ function main {
    SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
    SERVICECFGPATH="${SERVICEPATH}/${SERVICECFGFILE}"
 
-   # read in SERVICEIMAGENAME from config file if present.
-   if [ -e "$SERVICECFGPATH" ]; then
-      . "$SERVICECFGPATH"
-      IMAGENAME="$SERVICEIMAGENAME"
-   fi
-
    # dr SERVICE with no other params.
    if [ "$#" -eq 1 ]; then
       showservicehelp
@@ -535,6 +532,7 @@ function main {
    USERCOMMAND="$2"
    shift 2
 
+   # HANDLE COMMANDS FOR A SERVICE THAT MIGHT NOT EXIST YET. We can't just read IMAGENAME from the service cfg.
    case "$USERCOMMAND" in
       install)
          if [ "$#" -eq 1 ]; then
@@ -543,6 +541,22 @@ function main {
          else
             dieusage "dr SERVICENAME install IMAGENAME"
          fi
+         ;;
+   esac
+   
+   # -------------------------------------
+   
+   # If we've reached here then SERVICENAME is expected to exist. 
+   # Read in SERVICEIMAGENAME from config file. 
+   if [ ! -d "$SERVICEPATH" ]; then showservices ; die "Service $SERVICENAME does not exist." ; fi
+   if [ ! -e "$SERVICECFGPATH" ]; then die "Service ${SERVICENAME} is corrupt (missing its configuration file)." ; fi
+   . "$SERVICECFGPATH"
+   IMAGENAME="$SERVICEIMAGENAME"
+
+   # HANDLE COMMANDS FOR AN EXISTING SERVICE
+   case "$USERCOMMAND" in
+      update)
+         copydrfiles
          ;;
 
       *)         
@@ -554,30 +568,8 @@ function main {
          fi
          ;;
 
+   esac     
 
-   esac
-
-   # case "$CMD" in
-   #    configure)
-   #       if [ "$1" ]; then
-   #          ROOTPATH="$1"
-   #          configure
-   #       else
-   #          dieusage "dr configure ROOTPATH"
-   #       fi
-   #       ;;
-
-
-         
-   #    update)
-   #       if [ "$1" ]; then
-   #          SERVICENAME="$1"
-   #          setglobals
-   #          copydrfiles
-   #       else
-   #          dieusage "dr update SERVICENAME"
-   #       fi         
-   #       ;;
          
    #    # dr backup SERVICENAME BACKUPFILE
    #    backup)
@@ -614,22 +606,6 @@ function main {
    #       fi
    #       ;;
          
-      
-   #    *)
-   #       # check if CMD matches a service. If so run the appropriate script.
-   #       # format:   dr SERVICENAME COMMAND ARGS
-   #       SERVICENAME="$CMD"
-   #       setglobals
-         
-   #       SUBCOMMAND="$1" ; shift
-   #       SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/${SUBCOMMAND}"
-   #       if [ -n "$SUBCOMMAND" ] && [ -e "${SCRIPTTORUN}" ]; then
-   #          bash "${SCRIPTTORUN}" "${SERVICENAME}" "${IMAGENAME}" "$@"
-   #       else
-   #          bash "${SERVICEPATH}/${SERVICEBINDIR}/help" "${SERVICENAME}" "${IMAGENAME}"
-   #       fi
-   #       ;;
-   # esac
 
 }
 
