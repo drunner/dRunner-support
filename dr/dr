@@ -1,8 +1,15 @@
 #!/bin/bash
+set -o nounset
 
-# ------------------------------------------------------------------
-#
-#  dr : docker runner
+
+# ██████╗  ██████╗  ██████╗██╗  ██╗███████╗██████╗     ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗ 
+# ██╔══██╗██╔═══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗    ██╔══██╗██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗
+# ██║  ██║██║   ██║██║     █████╔╝ █████╗  ██████╔╝    ██████╔╝██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
+# ██║  ██║██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗    ██╔══██╗██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
+# ██████╔╝╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║    ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║
+# ╚═════╝  ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
+#                                                                                                          
+#                                                                                                          
 #  manage docker containers in a simple and consistent way.
 #  
 #  See:
@@ -10,19 +17,17 @@
 #
 # ------------------------------------------------------------------
 
-if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
+
+# Other global constanst from dr-install in this file.
+readonly DR_CFG_FILE="/etc/dr/dr.cfg"
 
 # Global constants.
-readonly DRUSER="druser"
-readonly DRGROUP="drgroup"
-readonly DRETCDIR="/etc/dr"
-readonly DRCFGDIR="config"
-readonly DRBINDIR="bin"
-readonly CFG_DIRECTORY="${DRETCDIR}/directory"
-readonly CFG_IMAGENAME="${DRCFGDIR}/imagename.txt"
-readonly CFG_SERVICENAME="${DRCFGDIR}/servicename.txt"
+readonly DRBINPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+readonly SERVICECFGFILE="service.cfg"
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" )
 readonly COPYIMAGE="j842/dr-baseimage-alpine"
+
 readonly BACKUP_HOSTZIP="config_host.tar.7z"
 readonly BACKUP_VOLZIP="config_volume_container.tar.7z"
 readonly BACKUP_MAIN="backup.tar.7z"
@@ -32,6 +37,8 @@ SERVICENAME=""
 DIRECTORY=""  
 DIRSERVICE=""
 IMAGENAME=""
+
+
 
 #------------------------------------------------------------------------------------
 
@@ -51,6 +58,22 @@ function dieusage {
 
 #------------------------------------------------------------------------------------
 
+function checkdir {
+   if [ -z "$1" ]; then die "Installation broken. Config file ${DR_CFG_FILE} doesn't set $2."; fi
+   if [ ! -d "$1" ]; then die "Installation broken. $2 is set to $1 but it doesn't exist."; fi
+}
+
+function initglobals {
+   # defines $DIRECTORY  $DRSERVICESPATH  $SUPPORTIMAGE
+   . "${DR_CFG_FILE}"
+   
+   # Check basic directories are okay
+   checkdir "${DIRECTORY}" "DIRECTORY"
+   checkdir "${DRSERVICESPATH}" "DRSERVICESPATH"
+}
+
+#------------------------------------------------------------------------------------
+
 # serviceline SERVICE SHORTHELP
 function serviceline {
    printf "   %-15s - %-55s\n" "$1" "$2"
@@ -61,16 +84,18 @@ function serviceline {
 # showservices
 function showservices {
    # list available services. 
-   # function install here should create imagename.txt
-   # the container's drinstall script should create the shorthelp.txt file
-   if [ -z $DIRECTORY ]; then die "Main directory not set - can't show services." ; fi
    echo "AVAILABLE SERVICES"
-   find "$DIRECTORY" -maxdepth 1 -type d | while read SERVICEPATH; do 
-      if [ -e "${SERVICEPATH}/${CFG_IMAGENAME}" ]; then
-         SERVICEIMAGENAME=$(<"$SERVICEPATH/${CFG_IMAGENAME}")
-         serviceline "${SERVICEPATH##*/}" "$SERVICEIMAGENAME"
+   NONEMPTYLIST=0
+   find "$DRSERVICESPATH" -maxdepth 1 -type d | while read SPATH; do 
+      NONEMPTYLIST=1
+      if [ -e "${SPATH}/${SERVICECFGFILE}" ]; then
+         . "${SPATH}/${SERVICECFGFILE}"
+         serviceline "${SPATH##*/}" "$SERVICEIMAGENAME"
+      else
+         serviceline "${SPATH##*/}" "Broken service"
       fi
    done
+   if [ "$NONEMPTYLIST" -eq 0 ]; then echo "   No services are installed." ; fi
 }
 
 #------------------------------------------------------------------------------------
@@ -83,16 +108,14 @@ NAME
    dr - docker runner
    
 SYNOPSIS
-   dr configure DIRECTORY
    dr clean
    dr list
    
-   dr install IMAGENAME SERVICENAME   
-   dr update SERVICENAME
-   dr destroy SERVICENAME
-
-   [PASS=?] dr backup SERVICENAME BACKUPFILE
-   [PASS=?] dr restore SERVICENAME BACKUPFILE
+   [PASS=?] dr SERVICENAME backup BACKUPFILE
+   [PASS=?] dr SERVICENAME restore BACKUPFILE
+   dr SERVICENAME install IMAGENAME
+   dr SERVICENAME update
+   dr SERVICENAME destroy
    
    dr SERVICENAME
    dr SERVICENAME enter
@@ -121,7 +144,7 @@ function command_exists { command -v "$1" >/dev/null 2>&1 ; }
 # configure
 function configure {
    if [ -z $DIRECTORY ]; then echo "dr configure requires directory argument.">&2 ; exit 1 ; fi
-   mkdir -p "$DRETCDIR"   # ensure directrory exists.   
+   mkdir -p "$DRETCPATH"   # ensure directrory exists.   
    echo "$DIRECTORY" > "${CFG_DIRECTORY}"
    
    # set up standard docker user and group for containers.
@@ -452,26 +475,44 @@ function setglobals {
 
 #------------------------------------------------------------------------------------
 
+# ███╗   ███╗ █████╗ ██╗███╗   ██╗
+# ████╗ ████║██╔══██╗██║████╗  ██║
+# ██╔████╔██║███████║██║██╔██╗ ██║
+# ██║╚██╔╝██║██╔══██║██║██║╚██╗██║
+# ██║ ╚═╝ ██║██║  ██║██║██║ ╚████║
+# ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+                                
 
-if ! command_exists docker ; then
-   echo "Please install Docker before using Docker Runner.">&2
-   echo "(e.g. use  https://github.com/j842/scripts/blob/master/install_docker.sh )">&2
-   exit 1
-fi
-if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then
-   echo "This script is currently only for Debian hosts.">&2
-   exit 1
-fi
+if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
+if ! command_exists docker ; then die "Requires docker to be installed." ; fi
+if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
+
 # Check basic commands are available
 COMMANDS=(gpg wget md5sum 7z 7za)
 for NEEDEDCMD in "${COMMANDS[@]}"; do
-  if ! command_exists "${NEEDEDCMD}" ; then 
-      echo "Docker Runner requires ${NEEDEDCMD} to be available for scripts." >&2 
-      echo "After Docker is installed, install all other dependencies with: ">&2 
-      echo "apt-get install -y gnupg p7zip-full">&2 
-      exit 1 
-  fi
+  if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
 done
+
+# defines $DIRECTORY  $DRSERVICESPATH  $SUPPORTIMAGE
+initglobals
+
+# check special commands with no SERVICENAME needed
+if [ -z "$1" ]; then 
+   showusage
+   showservices
+   exit 0
+elif [ "$1" -eq "clean" ]; then
+   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
+   exit 0
+elif [ "$1" -eq "list" ]; then
+   showservices 
+   exit 0
+fi     
+
+# all other commands have SERVICENAME as first argument.
+
+
+
 
 CMD="$1" ; shift
 
@@ -484,18 +525,7 @@ case "$CMD" in
          dieusage "dr configure DIRECTORY"
       fi
       ;;
-  
-   "")
-      showusage
-      if [ -d "$DRETCDIR" ]; then retrieveDIRECTORY ; showservices ; fi
-      exit 0
-      ;;
 
-   clean)
-      # not including -v /etc:/etc since we aren't using exclude files.
-      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
-      ;;
-          
    install)
       if [ "$1" ] && [ "$2" ]; then
          IMAGENAME="$1"
@@ -540,12 +570,7 @@ case "$CMD" in
          dieusage "[PASS=?] dr restore SERVICENAME BACKUPFILE"
       fi
       ;;
-      
-   list)
-      retrieveDIRECTORY
-      showservices
-      ;;
-      
+     
    #--------------------------         
       
    destroy)
