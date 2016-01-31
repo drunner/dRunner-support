@@ -146,7 +146,7 @@ function getUSERID {
 function checkimage {
    # check image exists.
    docker run --rm ${IMAGENAME} true
-   if [ "$?" -ne 0 ]; then die "The image ${IMAGENAME} wasn't successfully started." ; fi
+   if [ "$?" -ne 0 ]; then echo " ">&2 ; die "The Docker image ${IMAGENAME} wasn't successfully started - try building or pulling it first." ; fi
    
    # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
    for CFILE in "${REQDFILES[@]}"; do
@@ -178,19 +178,19 @@ EOF
 # copydrfiles
 function copydrfiles {   
    # the directory that the container will update.
-   local DRBINPATH="${SERVICEPATH}/${SERVICEBINDIR}"
-   if [ -d "${DRBINPATH}" ]; then rm -r "${DRBINPATH}" ; fi
-   mkdir -p "${DRBINPATH}"
+   local SERVICEBINPATH="${SERVICEPATH}/${SERVICEBINDIR}"
+   if [ -d "${SERVICEBINPATH}" ]; then rm -r "${SERVICEBINPATH}" ; fi
+   mkdir -p "${SERVICEBINPATH}"
 
    # we need the user id for the account that the image uses.
    getUSERID
    if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
 
    # allow the container to write into this folder.
-   chown "${USERID}:root" "${DRBINPATH}"
+   chown "${USERID}:root" "${SERVICEBINPATH}"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
-   docker run --rm -it -v "${DRBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /dr/* /tempcopy/"                             
+   docker run --rm -it -v "${SERVICEBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /dr/* /tempcopy/"                             
    if [ $? -ne 0 ]; then 
       echo "Failed to copy files.">&2 
       echo "You will need to reinstall the service.">&2
@@ -198,8 +198,8 @@ function copydrfiles {
       exit 1
    fi  
    # tighten up permissions
-   chown -R root:root "${DRBINPATH}"
-   chmod -R a-w "${DRBINPATH}"
+   chown -R root:root "${SERVICEBINPATH}"
+   chmod -R a-w "${SERVICEBINPATH}"
 }
 
 #------------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ function initSERVICEPATH {
    local DATESTAMP="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
    
    cat <<EOF >"${SERVICECFGPATH}"
-# Docker Runner configuration file for ${SERVICE} - ${IMAGENAME}
+# Docker Runner configuration file for ${SERVICENAME} - ${IMAGENAME}
 # Last modified ${DATESTAMP}
 
 SERVICEIMAGENAME=${IMAGENAME}
@@ -476,7 +476,8 @@ function setglobals {
 function showservicehelp {
    local HELPSCRIPT="${SERVICEPATH}/${SERVICEBINDIR}/help"
    if [ -e "${HELPSCRIPT}" ]; then
-      bash "${HELPSCRIPT}" "${SERVICENAME}" "${IMAGENAME}"
+      . "$SERVICECFGPATH"
+      bash "${HELPSCRIPT}" "${SERVICENAME}" "${SERVICEIMAGENAME}"
       exit 0
    else
       showservices
