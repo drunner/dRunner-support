@@ -86,7 +86,7 @@ function showservices {
    # list available services. 
    echo "AVAILABLE SERVICES"
    NONEMPTYLIST=0
-   find "$DRSERVICESPATH" -maxdepth 1 -type d | while read SPATH; do 
+   find "$DRSERVICESPATH" -maxdepth 1 -mindepth 1 -type d | while read SPATH; do 
       NONEMPTYLIST=1
       if [ -e "${SPATH}/${SERVICECFGFILE}" ]; then
          . "${SPATH}/${SERVICECFGFILE}"
@@ -120,6 +120,10 @@ SYNOPSIS
    dr SERVICENAME
    dr SERVICENAME enter
    dr SERVICENAME COMMAND ARGS
+   
+   Once SERVICENAME is installed you can call it directly, e.g.
+   SERVICENAME update
+   This convenience just calls through to dr SERVICENAME update.
 
 DESCRIPTION
    Provides a standard way to manage and run containers supporting dr.
@@ -497,7 +501,7 @@ done
 initglobals
 
 # check special commands with no SERVICENAME needed
-if [ -z "$1" ]; then 
+if [ "$#" -eq 0 ]; then 
    showusage
    showservices
    exit 0
