@@ -144,6 +144,10 @@ function getUSERID {
 
 # checkimage 
 function checkimage {
+   # check image exists.
+   docker run --rm ${IMAGENAME} true
+   if [ "$?" -ne 0 ]; then die "The image ${IMAGENAME} wasn't successfully started." ; fi
+   
    # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
    for CFILE in "${REQDFILES[@]}"; do
       docker run --rm -it "${IMAGENAME}" /bin/bash -c "command -v /dr/$CFILE >/dev/null 2>&1"
