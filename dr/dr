@@ -77,9 +77,7 @@ function serviceline {
 function showservices {
    # list available services. 
    echo "AVAILABLE SERVICES"
-   NONEMPTYLIST=0
    find "$DRSERVICESPATH" -maxdepth 1 -mindepth 1 -type d | while read SPATH; do 
-      NONEMPTYLIST=1
       if [ -e "${SPATH}/${SERVICECFGFILE}" ]; then
          . "${SPATH}/${SERVICECFGFILE}"
          serviceline "${SPATH##*/}" "$SERVICEIMAGENAME"
@@ -87,7 +85,6 @@ function showservices {
          serviceline "${SPATH##*/}" "Broken service"
       fi
    done
-   if [ "$NONEMPTYLIST" -eq 0 ]; then echo "   No services are installed." ; fi
 }
 
 #------------------------------------------------------------------------------------
@@ -139,7 +136,7 @@ function command_exists { command -v "$1" >/dev/null 2>&1 ; }
 
 # configure
 function configure {
-   if [ -z $ROOTPATH ]; then echo "dr configure requires ROOTPATH argument.">&2 ; exit 1 ; fi
+   if [ -z "$ROOTPATH" ]; then echo "dr configure requires ROOTPATH argument.">&2 ; exit 1 ; fi
    mkdir -p "$DRETCPATH"   # ensure directrory exists.   
    echo "$ROOTPATH" > "${CFG_ROOTPATH}"
    
@@ -158,12 +155,12 @@ function configure {
 function checkimage {
    # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
    for CFILE in "${REQDFILES[@]}"; do
-      docker run --rm -it ${IMAGENAME} /bin/bash -c "command -v /dr/$CFILE >/dev/null 2>&1"
+      docker run --rm -it "${IMAGENAME}" /bin/bash -c "command -v /dr/$CFILE >/dev/null 2>&1"
       if [ "$?" -ne 0 ]; then echo "${IMAGENAME} is not Docker Runner compatible. The script /dr/${CFILE} is missing.">&2 ; exit 1 ; fi
    done
    
    # Check running as druser.
-   USERID=$(docker run --rm -it ${IMAGENAME} /bin/bash -c "id -u | tr -d '\r\n'")
+   USERID=$(docker run --rm -it "${IMAGENAME}" /bin/bash -c "id -u | tr -d '\r\n'")
    if [ "$USERID" != "22022" ]; then echo "${IMAGENAME} is not Docker Runner compatible. Not running as druser (uid 22022). It's >>$USERID<<">&2 ; exit 1 ; fi   
    
    echo "${IMAGENAME} is dr compatible.">&2
@@ -210,7 +207,7 @@ function copydrfiles {
 # initdrservice
 function initSERVICEPATH {
    # can only call when service ROOTPATH not present (for safety)
-   if [ -d ${SERVICEPATH} ]; then
+   if [ -d "${SERVICEPATH}" ]; then
       echo "A service is already installed at ${SERVICEPATH}. Initialisation cancelled.">&2
       echo "You might want   dr update ${SERVICENAME}  instead.">&2
       exit 1
@@ -237,8 +234,8 @@ function initSERVICEPATH {
 
 # install
 function install {   
-   if [ -z $IMAGENAME ]; then echo "dr install requires IMAGENAME.">&2 ; exit 1 ; fi
-   if [ -z $SERVICENAME ]; then echo "dr install requires SERVICENAME.">&2 ; exit 1 ; fi
+   if [ -z "$IMAGENAME" ]; then echo "dr install requires IMAGENAME.">&2 ; exit 1 ; fi
+   if [ -z "$SERVICENAME" ]; then echo "dr install requires SERVICENAME.">&2 ; exit 1 ; fi
 
    checkimage
    
@@ -268,7 +265,7 @@ function install {
 
 # destroy
 function destroy {
-   if [ -z $SERVICENAME ]; then die "dr destroy requires SERVICENAME to be set." ; fi
+   if [ -z "$SERVICENAME" ]; then die "dr destroy requires SERVICENAME to be set." ; fi
    if [ ! -d "$SERVICEPATH" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
    
    local RVALD=0
@@ -469,6 +466,19 @@ function setglobals {
    if [ -z "$IMAGENAME" ]; then die "Error - ${CFG_IMAGENAME} is empty." ; fi
 }
 
+
+function showservicehelp {
+   local HELPSCRIPT="${SERVICEPATH}/${SERVICEBINDIR}/help"
+   if [ -e "${HELPSCRIPT}" ]; then
+      bash "${HELPSCRIPT}" "${SERVICENAME}" "${IMAGENAME}"
+      exit 0
+   else
+      showservices
+      echo " ">&2
+      die "Service ${SERVICENAME} does not exist."
+   fi
+}
+
 #------------------------------------------------------------------------------------
 
 # ███╗   ███╗ █████╗ ██╗███╗   ██╗
@@ -498,16 +508,16 @@ function main {
       showusage
       showservices
       exit 0
-   elif [ "$1" -eq "clean" ]; then
+   elif [ "$1" = "clean" ]; then
       docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
       exit 0
-   elif [ "$1" -eq "list" ]; then
+   elif [ "$1" = "list" ]; then
       showservices 
       exit 0
    fi     
 
    # all other commands have SERVICENAME as first argument.
-   SERVICENAME="$1" ; shift
+   SERVICENAME="$1"
    SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
    SERVICECFGPATH="${SERVICEPATH}/${SERVICECFGFILE}"
 
@@ -519,16 +529,34 @@ function main {
 
    # dr SERVICE with no other params.
    if [ "$#" -eq 1 ]; then
-      if [ -e "$SERVICECFGPATH" ]; then
-         bash "${SERVICEPATH}/${SERVICEBINDIR}/help" "${SERVICENAME}" "${IMAGENAME}"
-         exit 0
-      else
-         die "Service ${SERVICENAME} does not exist."
-      fi
+      showservicehelp
    fi
 
+   # get the command to run and shift so $@ is the args.
+   USERCOMMAND="$2"
+   shift 2
 
-   # CMD="$1" ; shift
+   case "$USERCOMMAND" in
+      install)
+         if [ "$#" -eq 1 ]; then
+            IMAGENAME="$1"
+            install
+         else
+            dieusage "dr SERVICENAME install IMAGENAME"
+         fi
+         ;;
+
+      *)         
+         SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/${USERCOMMAND}"
+         if [ -e "${SCRIPTTORUN}" ]; then
+            bash "${SCRIPTTORUN}" "${SERVICENAME}" "${IMAGENAME}" "$@"
+         else
+            showservicehelp
+         fi
+         ;;
+
+
+   esac
 
    # case "$CMD" in
    #    configure)
@@ -540,17 +568,7 @@ function main {
    #       fi
    #       ;;
 
-   #    install)
-   #       if [ "$1" ] && [ "$2" ]; then
-   #          IMAGENAME="$1"
-   #          SERVICENAME="$2"
-   #          retrieveROOTPATH
-   #          SERVICEPATH="${ROOTPATH}/${SERVICENAME}"
-   #          install
-   #       else
-   #          dieusage "dr install IMAGENAME SERVICENAME"
-   #       fi
-   #       ;;
+
          
    #    update)
    #       if [ "$1" ]; then
