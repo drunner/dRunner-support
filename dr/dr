@@ -350,7 +350,7 @@ function restore {
    "${COMPRESSPATH}/dr_decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
       
    # check backup has key files.
-   local KEYFILES=("${TEMPF}/${BACKUP_HOSTZIP}" "${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/imagename.txt")
+   local KEYFILES=("${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/${SERVICECFGFILE}")
    for NEEDEDFILE in "${KEYFILES[@]}"; do
       if [ ! -e "$NEEDEDFILE" ]; then die "Backup corrupt. Missing ${NEEDEDFILE}."; fi
    done
