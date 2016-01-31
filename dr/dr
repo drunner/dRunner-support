@@ -27,7 +27,6 @@ readonly SERVICEBINDIR="bin"
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
 readonly COPYIMAGE="j842/dr-baseimage-alpine"
 
-readonly BACKUP_HOSTZIP="config_host.tar.7z"
 readonly BACKUP_VOLZIP="config_volume_container.tar.7z"
 readonly BACKUP_MAIN="backup.tar.7z"
 
@@ -55,12 +54,15 @@ function checkdir {
 }
 
 function initglobals {
-   # defines $ROOTPATH  $DRSERVICESPATH  $SUPPORTIMAGE
+   # defines ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, DRBINPATH
    . "${DR_CFG_FILE}"
    
    # Check basic directories are okay
    checkdir "${ROOTPATH}" "ROOTPATH"
    checkdir "${DRSERVICESPATH}" "DRSERVICESPATH"
+   checkdir "${DRBINPATH}" "DRBINPATH"
+   
+   COMPRESSPATH="${DRBINPATH}/compress"
 }
 
 #------------------------------------------------------------------------------------
@@ -293,69 +295,9 @@ function destroy {
 }
 
 #------------------------------------------------------------------------------------
-# compress SOURCEFOLDER ARCHIVEFOLDER ARCHIVENAME [PASS]
-function compress {
-   local SOURCEFOLDER=$(realpath "$1" | tr -d '\r\n')
-   if [ $? -ne 0 ]; then die "dr function compress: Couldn't find source path ${1}." ; fi
-   local ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-   if [ $? -ne 0 ]; then die "dr function compress: Couldn't find destination path ${2}." ; fi
-   local ARCHIVEPATH="$ARCHIVEFOLDER/$3"
-   local PASSCMD=""
-   if [ -n "$4" ]; then PASSCMD="-p${4}"; fi
-   
-   tar cf - -C "$SOURCEFOLDER" . | 7za a -si "${PASSCMD}" "$ARCHIVEPATH" > /dev/null
-   if [ $? -ne 0 ]; then die "Failed to create archive of $SOURCEFOLDER" ; fi
-}
-
-# decompress DESTFOLDER ARCHIVEFOLDER ARCHIVENAME [PASS]
-function decompress {
-   local DESTFOLDER=$(realpath "$1" | tr -d '\r\n')
-   local ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-   local ARCHIVEPATH="$ARCHIVEFOLDER/$3"
-
-   if [ ! -e "$ARCHIVEPATH" ]; then die "dr function decompress: No such archive: $ARCHIVEPATH"; fi
-   if [ ! -d "$DESTFOLDER" ]; then die "dr function decompress: Destination folder does not exist: $DESTFOLDER"; fi
-   local PASSCMD=""
-   if [ -n "$4" ]; then PASSCMD="-p${4}"; fi
-   
-   7za x -so "${PASSCMD}" "${ARCHIVEPATH}" | tar xf - -C "${DESTFOLDER}"
-   if [ $? -ne 0 ]; then die "Failed to decompress archive $ARCHIVEPATH . The password may be incorrect!"; fi
-}
-
-# compressvolume VOLUMENAME ARCHIVEFOLDER ARCHIVENAME
-function compressvolume {
-   local VOLUMENAME="$1"
-   local ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-   if [ $? -ne 0 ]; then die "dr function compressvolume: Couldn't find destination path $2." ; fi
-   local ARCHIVENAME="$3"
-   local DCNAME="dr-compressvolume"
-
-   docker run --name="${DCNAME}" \
-      -v "${VOLUMENAME}:/vol" -v "${ARCHIVEFOLDER}:/archive" "${COPYIMAGE}" \
-      /bin/bash -c "tar zcf /archive/${ARCHIVENAME} -C /vol ."
-   docker rm "${DCNAME}" >/dev/null 
-}
-
-# decompressvolume VOLUMENAME ARCHIVEFOLDER ARCHIVENAME
-function decompressvolume {
-   local VOLUMENAME="$1"
-   local ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-   local ARCHIVENAME="$3"
-   if [ ! -e "$ARCHIVEFOLDER/$ARCHIVENAME" ]; then die "dr function decompressvolume: Couldn't find archive $ARCHIVENAME" ; fi
-   local DCNAME="dr-decompressvolume"
-
-   # destroy any pre-existing data!
-   docker volume rm "${VOLUMENAME}" >/dev/null
-   docker volume create --name="${VOLUMENAME}" >/dev/null
-   docker run --name="${DCNAME}" \
-      -v "${VOLUMENAME}:/vol" -v "${ARCHIVEFOLDER}:/archive" "${COPYIMAGE}" \
-      /bin/bash -c "tar zxf /archive/${ARCHIVENAME} -C /vol"
-   docker rm "${DCNAME}" >/dev/null 
-}
-
-#------------------------------------------------------------------------------------
 
 # backup BACKUPFILE
+# global variables ready: ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, SERVICENAME, SERVICEPATH, SERVICECFGPATH, IMAGENAME
 function backup {
    if [ -z "$1" ]; then die "No BACKUPFILE was specified." ; fi
    local BACKUPFILE=$(realpath "$1" | tr -d '\r\n')
@@ -368,26 +310,22 @@ function backup {
    local TEMPC="${TEMPPARENT}/containerbackup"
    mkdir -p "$TEMPC"
    
-   # for convenience, stick teh imagename in the tempparent folder
-   echo "${IMAGENAME}" > "$TEMPPARENT/imagename.txt"
-   
-   # back up our configuration ROOTPATH.
-   compress "$SERVICEPATH/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
-   
+   # back up the service config (SERVICECFGFILE) to the tempparent folder
+   cp "$SERVICECFGPATH" "$TEMPPARENT"
+      
    # back up our volume container (dr-${SERVICENAME}-config).
-   compressvolume "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
+   "${COMPRESSPATH}/dr_compressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
    
    # call through to container to backup anything there in a subfolder.
    SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/backup"
    bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
       
    # Compress everything with password
-   compress "$TEMPPARENT" "$TEMPROOT" "${BACKUP_MAIN}" "$PASS"
+   "${COMPRESSPATH}/dr_compress" "$TEMPPARENT" "$TEMPROOT" "${BACKUP_MAIN}"
    mv "${TEMPROOT}/${BACKUP_MAIN}" "$BACKUPFILE"
 
    rm -r "${TEMPROOT}"
    echo " ">&2
-   if [ -z "$PASS" ]; then "WARNING: No password supplied. Backup is not encrypted!">&2 ; fi
    echo "Backed up to $BACKUPFILE succesfully.">&2
 }
 
@@ -409,7 +347,7 @@ function restore {
    
    # decompress the main backup
    cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
-   decompress "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN" "$PASS"
+   "${COMPRESSPATH}/dr_decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
       
    # check backup has key files.
    local KEYFILES=("${TEMPF}/${BACKUP_HOSTZIP}" "${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/imagename.txt")
@@ -418,18 +356,18 @@ function restore {
    done
    
    # set IMAGENAME - the only missing global var.
-   IMAGENAME=$(<"$TEMPPARENT/imagename.txt")
+   . "${TEMPPARENT}/${SERVICECFGFILE}"
+   IMAGENAME="$SERVICEIMAGENAME"
 
    # now can install base service
    install
         
    # restore our volume container (dr-${SERVICENAME}-config), first destroying the one install just created.
-   decompressvolume "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
+   "${COMPRESSPATH}/dr_decompressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
 
-   # restore our configuration, first removing the one install just created.
-   rm -r "${SERVICEPATH}/${DRCFGDIR}"
-   mkdir "${SERVICEPATH}/${DRCFGDIR}"
-   decompress "${SERVICEPATH}/${DRCFGDIR}" "${TEMPF}" "${BACKUP_HOSTZIP}"
+   # We restore our backed up configuration, first removing the one install just created.
+   rm -f "${SERVICECFGPATH}"
+   cp "${TEMPPARENT}/${SERVICECFGFILE}" "$SERVICECFGPATH" 
    
    # call through to container to restore anything there.
    SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/restore"
@@ -503,7 +441,7 @@ function main {
    if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
    done
 
-   # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE
+   # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE,  DRBINPATH
    initglobals
 
    # check special commands with no SERVICENAME needed
@@ -543,7 +481,15 @@ function main {
             dieusage "dr SERVICENAME install IMAGENAME"
          fi
          ;;
-   esac
+
+      restore)
+         if [ "$#" -eq 1 ]; then
+            restore "$1"
+         else
+            dieusage "[PASS=?] dr SERVICENAME restore BACKUPFILE"
+         fi
+         ;;
+      esac
    
    # -------------------------------------
    
@@ -564,6 +510,13 @@ function main {
          destroy 
          ;;         
          
+      backup)
+         if [ "$#" -eq 1 ]; then
+            backup "$1"
+         else
+            dieusage "[PASS=?] dr SERVICENAME backup BACKUPFILE"
+         fi
+         ;;
 
       *)         
          SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/${USERCOMMAND}"
@@ -575,36 +528,7 @@ function main {
          ;;
 
    esac     
-
-         
-   #    # dr backup SERVICENAME BACKUPFILE
-   #    backup)
-   #       if [ "$1" ] && [ "$2" ]; then
-   #          SERVICENAME="$1"
-   #          setglobals
-   #          backup "$2"
-   #       else
-   #          dieusage "[PASS=?] dr backup SERVICENAME BACKUPFILE"
-   #       fi
-   #       ;;
-      
-   #    # dr restore SERVICENAME BACKUPFILE
-   #    restore)
-   #       if [ "$1" ] && [ "$2" ]; then
-   #          SERVICENAME="$1"
-   #          retrieveROOTPATH
-   #          SERVICEPATH="${ROOTPATH}/${SERVICENAME}"
-   #          restore "$2"
-   #       else
-   #          dieusage "[PASS=?] dr restore SERVICENAME BACKUPFILE"
-   #       fi
-   #       ;;
-      
-   #    #--------------------------         
-
-         
-
 }
 
-
+#--------------------------------------------------------------------------
 main "$@"

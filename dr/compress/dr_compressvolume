@@ -1,0 +1,31 @@
+#!/bin/bash
+set -o nounset
+
+readonly COPYIMAGE="j842/dr-baseimage-alpine"
+
+# die MESSAGE 
+function die {
+   if [ -n "$1" ]; then
+      echo "$1" <&2
+   else
+      echo "Unexpected error. Exiting."<&2
+   fi
+   exit 1
+}
+
+# compressvolume VOLUMENAME ARCHIVEFOLDER ARCHIVENAME
+
+if [ $# -ne 3 ]; then die "dr_compressvolume VOLUMENAME ARCHIVEFOLDER ARCHIVENAME" ; fi
+
+VOLUMENAME="$1"
+ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
+if [ $? -ne 0 ]; then die "dr_compressvolume: Couldn't find destination path $2." ; fi
+ARCHIVENAME="$3"
+
+DCNAME="dr-compressvolume"
+
+docker run --name="${DCNAME}" \
+   -v "${VOLUMENAME}:/vol" -v "${ARCHIVEFOLDER}:/archive" "${COPYIMAGE}" \
+   /bin/bash -c "tar zcf /archive/${ARCHIVENAME} -C /vol ."
+docker rm "${DCNAME}" >/dev/null 
+
