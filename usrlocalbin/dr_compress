@@ -30,6 +30,6 @@ else
    echo "WARNING: No password supplied. Backup is not encrypted!">&2
 fi
 
-tar cf - -C "$SOURCEFOLDER" . | 7za a -si "${PASSCMD}" "$ARCHIVEPATH"  2>/dev/null
+tar cf - -C "$SOURCEFOLDER" . | 7za a -si "${PASSCMD}" "$ARCHIVEPATH"  >/dev/null 2>&1
 if [ $? -ne 0 ]; then die "Failed to create archive." ; fi
 
