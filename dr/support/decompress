@@ -27,7 +27,7 @@ function movecontents {
    # check if there's anything to restore.
    if [ "$(ls -A "$1")" ]; then
       # move everything, including hidden files. Subshell to set dotglob.
-      (shopt -s dotglob; mv -- "${1}/*" "${2}")
+      (shopt -s dotglob; mv -- "$1"/* "$2")
    fi
 }
 
