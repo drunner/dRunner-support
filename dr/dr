@@ -62,7 +62,7 @@ function initglobals {
    checkdir "${DRSERVICESPATH}" "DRSERVICESPATH"
    checkdir "${DRBINPATH}" "DRBINPATH"
    
-   COMPRESSPATH="${DRBINPATH}/compress"
+   readonly SUPPORTPATH="${DRBINPATH}/support"
 }
 
 #------------------------------------------------------------------------------------
@@ -144,11 +144,10 @@ function getUSERID {
 
 # checkimage 
 function checkimage {
-   VALIDATORPATH="${DRBINPATH}/validator"
-   if [ ! -e "${VALIDATORPATH}/validate" ]; then
-      die "Missing dr file: ${VALIDATORPATH}/validate"
+   if [ ! -e "${SUPPORTPATH}/validator" ]; then
+      die "Missing dr file: ${SUPPORTPATH}/validator"
    fi
-   docker run --rm -v "${VALIDATORPATH}:/validator" "${IMAGENAME}" /bin/bash -c "/validator/validate"
+   docker run --rm -v "${SUPPORTPATH}:/support" "${IMAGENAME}" /bin/bash -c "/support/validator"
    if [ "$?" -ne 0 ]; then 
       die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
    fi
@@ -314,14 +313,14 @@ function backup {
    cp "$SERVICECFGPATH" "$TEMPPARENT"
       
    # back up our volume container (dr-${SERVICENAME}-config).
-   "${COMPRESSPATH}/dr_compressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
+   "${SUPPORTPATH}/dr_compressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
    
    # call through to container to backup anything there in a subfolder.
    SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/backup"
    bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
       
    # Compress everything with password
-   "${COMPRESSPATH}/dr_compress" "$TEMPPARENT" "$TEMPROOT" "${BACKUP_MAIN}"
+   "${SUPPORTPATH}/dr_compress" "$TEMPPARENT" "$TEMPROOT" "${BACKUP_MAIN}"
    mv "${TEMPROOT}/${BACKUP_MAIN}" "$BACKUPFILE"
 
    rm -r "${TEMPROOT}"
@@ -347,7 +346,7 @@ function restore {
    
    # decompress the main backup
    cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
-   "${COMPRESSPATH}/dr_decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
+   "${SUPPORTPATH}/dr_decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
       
    # check backup has key files.
    local KEYFILES=("${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/${SERVICECFGFILE}")
@@ -363,7 +362,7 @@ function restore {
    install
         
    # restore our volume container (dr-${SERVICENAME}-config), first destroying the one install just created.
-   "${COMPRESSPATH}/dr_decompressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
+   "${SUPPORTPATH}/dr_decompressvolume" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
 
    # We restore our backed up configuration, first removing the one install just created.
    rm -f "${SERVICECFGPATH}"
@@ -477,6 +476,7 @@ function main {
          if [ "$#" -eq 1 ]; then
             IMAGENAME="$1"
             install
+            exit 0
          else
             dieusage "dr SERVICENAME install IMAGENAME"
          fi
@@ -485,6 +485,7 @@ function main {
       restore)
          if [ "$#" -eq 1 ]; then
             restore "$1"
+            exit 0
          else
             dieusage "[PASS=?] dr SERVICENAME restore BACKUPFILE"
          fi

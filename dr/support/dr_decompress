@@ -1,0 +1,54 @@
+#!/bin/bash
+set -o nounset
+
+# ██████╗ ██████╗         ██████╗ ███████╗ ██████╗ ██████╗ ███╗   ███╗██████╗ ██████╗ ███████╗███████╗███████╗
+# ██╔══██╗██╔══██╗        ██╔══██╗██╔════╝██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔══██╗██╔════╝██╔════╝██╔════╝
+# ██║  ██║██████╔╝        ██║  ██║█████╗  ██║     ██║   ██║██╔████╔██║██████╔╝██████╔╝█████╗  ███████╗███████╗
+# ██║  ██║██╔══██╗        ██║  ██║██╔══╝  ██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ██╔══██╗██╔══╝  ╚════██║╚════██║
+# ██████╔╝██║  ██║███████╗██████╔╝███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║
+# ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+                                                                                                            
+
+# die MESSAGE 
+function die {
+   if [ "$#" -eq 1 ]; then
+      echo "$1" <&2
+   else
+      echo "Unexpected error. Exiting."<&2
+   fi
+   exit 1
+}
+
+function volexists {
+  docker volume ls | grep $1 > /dev/null
+}
+
+#------------------------------------------------------------------------------------
+# PASS=? dr_decompress DESTPATH/VOLUME ARCHIVEFOLDER ARCHIVENAME
+
+if [ $# -ne 3 ]; then die "PASS=? dr_decompress DESTPATH/VOLUME ARCHIVEFOLDER ARCHIVENAME" ; fi
+
+if [ -d "$1" ]; then
+   # path
+   DEST=$(realpath "$1" | tr -d '\r\n')
+   if [ $? -ne 0 ]; then die "dr_compress: Couldn't find destination path ${1}." ; fi
+else
+   # volume
+   volexists "$1"
+   if [ $? -ne 0 ]; then die "$1 is not a valid path nor Docker volume container." ; fi   
+   DEST="$1"
+fi
+
+ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
+if [ $? -ne 0 ]; then die "dr_compress: Couldn't find source path ${2}." ; fi
+
+ARCHIVENAME="$3"
+ 
+docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
+            -v "${ARCHIVEFOLDER}:/src" -v "${DEST}:/dst" \
+            j842/dr-support dr_decompress "${ARCHIVENAME}"
+RVAL=$?
+
+docker rm "dr_decompress" >/dev/null 2>&1
+
+exit "$RVAL" 

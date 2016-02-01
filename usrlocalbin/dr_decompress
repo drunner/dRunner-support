@@ -11,21 +11,24 @@ function die {
    exit 1
 }
 
-# PASS=? dr_decompress DESTFOLDER ARCHIVEFOLDER ARCHIVENAME
+#------------------------------------------------------------------------------------
+# PASS=? dr_decompress ARCHIVENAME
 
-if [ $# -ne 3 ]; then die "PASS=? dr_decompress DESTFOLDER ARCHIVEFOLDER ARCHIVENAME" ; fi
+if [ "$#" -ne 1 ]; then die "PASS=? dr_decompress ARCHIVENAME" ; fi
 
-DESTFOLDER=$(realpath "$1" | tr -d '\r\n')
-ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-ARCHIVEPATH="$ARCHIVEFOLDER/$3"
+DESTFOLDER="/dst"
+ARCHIVEPATH="/src/$3"
 
 if [ ! -e "$ARCHIVEPATH" ]; then die "dr_decompress: No such archive: $ARCHIVEPATH"; fi
 if [ ! -d "$DESTFOLDER" ]; then die "dr_decompress: Destination folder does not exist: $DESTFOLDER"; fi
  
-PASSCMD=""
+# default to empty string if doesn't exist, then test for empty string.
 if [ -n "${PASS-}" ]; then 
    PASSCMD="-p${PASS}"; 
+else
+   PASSCMD=""
+   echo "WARNING: No password supplied.">&2
 fi
 
 7za x -so "${PASSCMD}" "${ARCHIVEPATH}" | tar xf - -C "${DESTFOLDER}"
-if [ $? -ne 0 ]; then die "Failed to decompress archive $ARCHIVEPATH . The password may be incorrect!"; fi
+if [ $? -ne 0 ]; then die "Failed to decompress archive. The password may be incorrect!"; fi

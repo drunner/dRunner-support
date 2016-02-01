@@ -9,6 +9,8 @@
                                                                       
 
 # Validate the image I'm running in as being Docker Runner compatible
+# Gets copied to the host as part of installing dr-support, then mounted
+# in the other container by dr to run the check.
 
 function die {
    echo "Not Docker Runner compatible - $1">&2
