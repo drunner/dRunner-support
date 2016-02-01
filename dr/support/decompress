@@ -49,7 +49,7 @@ if [ $? -ne 0 ]; then die "dr_compress: Couldn't find source path ${2}." ; fi
 
 ARCHIVENAME="$3"
  
-local TEMPDIR="$(mktemp -d)"
+TEMPDIR="$(mktemp -d)"
 chmod a+rwx "${TEMPDIR}"
  
 docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
