@@ -19,7 +19,7 @@ if [ "$#" -ne 1 ]; then die "PASS=? dr_compress ARCHIVENAME" ; fi
 SOURCEFOLDER="/src"
 ARCHIVEPATH="/dst/$1"
 
-if [ -e $ARCHIVEPATH ]; then die "Archive $1 already exists. Aborting." fi
+if [ -e "$ARCHIVEPATH" ]; then die "Archive $1 already exists. Aborting." ; fi
 if [ ! -d "$SOURCEFOLDER" ]; then die "dr_compress: Source folder does not exist: $SOURCEFOLDER"; fi
 
 # default to empty string if doesn't exist, then test for empty string.
