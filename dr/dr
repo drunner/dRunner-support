@@ -100,6 +100,7 @@ NAME
 SYNOPSIS
    dr clean
    dr list
+   dr update
    
    [PASS=?] dr SERVICENAME backup BACKUPFILE
    [PASS=?] dr SERVICENAME restore BACKUPFILE
@@ -113,7 +114,7 @@ SYNOPSIS
    
    Once SERVICENAME is installed you can call it directly, e.g.
    SERVICENAME update
-   This convenience just calls through to dr SERVICENAME update.
+   This convenience just calls through to  dr SERVICENAME update .
 
 DESCRIPTION
    Provides a standard way to manage and run containers supporting dr.
@@ -260,6 +261,14 @@ function install {
     
    # TODO: If we had errors then destroy everything!
    echo "Installation of service ${SERVICENAME} successful."
+}
+
+#------------------------------------------------------------------------------------
+
+function update {
+   # dr-install is downloaded from GitHub and put in /dr/support/dr-install by the Dockerfile,
+   # then copied to the host in ${SUPPORTPATH} by dr-install that's run by the user.
+   "${SUPPORTPATH}/dr-install" "${ROOTPATH}"
 }
 
 #------------------------------------------------------------------------------------
@@ -434,7 +443,7 @@ function main {
    if ! command_exists docker ; then die "Requires docker to be installed." ; fi
    if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
 
-   # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE,  DRBINPATH
+   # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE,  DRBINPATH, SUPPORTPATH
    initglobals
 
    # check special commands with no SERVICENAME needed
@@ -447,6 +456,9 @@ function main {
       exit 0
    elif [ "$1" = "list" ]; then
       showservices 
+      exit 0
+   elif [ "$1" = "update" ]; then
+      update
       exit 0
    fi     
 
