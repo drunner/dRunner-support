@@ -23,14 +23,6 @@ function volexists {
    docker volume ls | grep "$1" > /dev/null
 }
 
-function movecontents {
-   # check if there's anything to restore.
-   if [ "$(ls -A "$1")" ]; then
-      # move everything, including hidden files. Subshell to set dotglob.
-      (shopt -s dotglob; mv -- "$1"/* "$2")
-   fi
-}
-
 #------------------------------------------------------------------------------------
 # PASS=? decompress DESTPATH/VOLUME ARCHIVEFOLDER ARCHIVENAME
 
@@ -55,19 +47,12 @@ ARCHIVENAME="$3"
 if [ ! -e "${ARCHIVEFOLDER}/${ARCHIVENAME}" ]; then 
    die "decompress: archive does not exist: ${ARCHIVEFOLDER}/${ARCHIVENAME}"; 
 fi
- 
-TEMPDIR="$(mktemp -d)"
- 
+  
 docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
-            -v "${ARCHIVEFOLDER}:/src" -v "${TEMPDIR}:/dst" \
+            -v "${ARCHIVEFOLDER}:/src" -v "${DEST}:/dst" \
             j842/dr-support dr_decompress "${ARCHIVENAME}"
 RVAL=$?
 docker rm "dr_decompress" >/dev/null 2>&1
-
-if [ "$RVAL" -eq 0 ]; then
-   movecontents "${TEMPDIR}" "${DEST}"
-   RVAL=$?
-fi
 
 rm -r "$TEMPDIR"
 
