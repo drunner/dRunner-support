@@ -470,6 +470,8 @@ function main {
          if [ "$#" -eq 1 ]; then
             IMAGENAME="$1"
             install
+            echo " ">&2
+            showservicehelp
             exit 0
          else
             dieusage "dr SERVICENAME install IMAGENAME"
