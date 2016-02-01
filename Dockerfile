@@ -14,7 +14,7 @@ RUN adduser --disabled-password --gecos '' -u 22020 --gid 22020 druser
 # add in the assets.
 ADD ["./dr","/dr"]
 ADD ["./usrlocalbin","/usr/local/bin/"]
-RUN echo "BUILDTIME=\"$(date)\"" > /dr/buildtime
+RUN echo "BUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /dr/buildtime
 
 RUN chmod a+rx -R /usr/local/bin  &&  chmod a-w -R /dr
 
