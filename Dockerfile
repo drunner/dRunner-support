@@ -3,7 +3,7 @@
 FROM debian
 MAINTAINER j842
 
-RUN apt-get update && apt-get install -y p7zip-full gnupg
+RUN apt-get update && apt-get install -y p7zip-full gnupg wget
 
 RUN groupadd -g 22020 drgroup
 RUN adduser --disabled-password --gecos '' -u 22020 --gid 22020 druser
