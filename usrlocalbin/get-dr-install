@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# get-dr-install PATH
+
+TARGETDIR="$1"
+DOWNLOADURL="https://raw.github.com/j842/dockerrunner/master/dr-install"
+
+if [ ! -d "${TARGETDIR}" ]; then
+   echo "Directory ${TARGETDIR} does not exist.">&2
+   exit 1
+fi
+
+TARGET="${TARGETDIR}/dr-install"
+
+if [ -e "${TARGET}" ]; then
+   rm "${TARGET}"
+   if [ $? -ne 0 ]; then
+      echo "${TARGET} already exists and couldn't be removed.">&2
+      exit 1
+   fi
+fi
+
+wget --no-cache -nv -O "${TARGET}" "${DOWNLOADURL}"
+
+if [ ! -e "${TARGET}" ]; then 
+   echo "Download failed!">&2
+   exit 1
+fi
+
+exit 0

@@ -16,10 +16,6 @@ ADD ["./dr","/dr"]
 ADD ["./usrlocalbin","/usr/local/bin/"]
 RUN chmod a+rx -R /usr/local/bin  &&  chmod a-w -R /dr
 
-ENV DownloadDate 2016-01-31-1737
-RUN wget --no-cache -nv -O /dr/support/dr-install https://raw.github.com/j842/dockerrunner/master/dr-install
-RUN chmod a+x /dr/support/dr-install 
-
 # lock in druser.
 USER druser
 
