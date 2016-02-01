@@ -36,7 +36,7 @@ if [ $# -ne 3 ]; then die "PASS=? decompress DESTPATH/VOLUME ARCHIVEFOLDER ARCHI
 if [ -d "$1" ]; then
    # path
    DEST=$(realpath "$1" | tr -d '\r\n')
-   if [ $? -ne 0 ]; then die "dr_compress: Couldn't find destination path ${1}." ; fi
+   if [ $? -ne 0 ]; then die "decompress: Couldn't find destination path ${1}." ; fi
 else
    # volume
    volexists "$1"
@@ -45,9 +45,13 @@ else
 fi
 
 ARCHIVEFOLDER=$(realpath "$2" | tr -d '\r\n')
-if [ $? -ne 0 ]; then die "dr_compress: Couldn't find source path ${2}." ; fi
+if [ $? -ne 0 ]; then die "decompress: Couldn't find source path ${2}." ; fi
 
 ARCHIVENAME="$3"
+
+if [ ! -e "${ARCHIVEFOLDER}/${ARCHIVENAME}" ]; then 
+   die "decompress: archive does not exist: ${ARCHIVEFOLDER}/${ARCHIVENAME}"; 
+fi
  
 TEMPDIR="$(mktemp -d)"
 chmod a+rwx "${TEMPDIR}"
@@ -62,5 +66,7 @@ if [ "$RVAL" -eq 0 ]; then
    movecontents "${TEMPDIR}" "${DEST}"
    RVAL=$?
 fi
+
+rm -r "$TEMPDIR"
 
 exit "$RVAL" 

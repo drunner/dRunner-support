@@ -350,6 +350,8 @@ function backup {
       "${SUPPORTPATH}/compress" "dr-${SERVICENAME}-config" "${TEMPF}" "${BACKUP_VOLZIP}"
       
       # call through to container to backup anything there in a subfolder.
+      getUSERID
+      chown "${USERID}" "${TEMPC}"
       SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/backup"
       bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
          
@@ -381,17 +383,16 @@ function restore {
       set -e
 
       local TEMPPARENT="${TEMPROOT}/backup"
+      mkdir -p "$TEMPPARENT"
       local TEMPF="${TEMPPARENT}/drbackup"
-      mkdir -p "$TEMPF"
       local TEMPC="${TEMPPARENT}/containerbackup"
-      mkdir -p "$TEMPC"
       
       # decompress the main backup
       cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
       "${SUPPORTPATH}/decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
          
       # check backup has key files.
-      local KEYFILES=("${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/${SERVICECFGFILE}")
+      local KEYFILES=("${TEMPF}/${BACKUP_VOLZIP}" "${TEMPPARENT}/${SERVICECFGFILE}" "${TEMPC}")
       for NEEDEDFILE in "${KEYFILES[@]}"; do
          if [ ! -e "$NEEDEDFILE" ]; then die "Backup corrupt. Missing ${NEEDEDFILE}."; fi
       done
@@ -410,7 +411,7 @@ function restore {
       rm -f "${SERVICECFGPATH}"
       cp "${TEMPPARENT}/${SERVICECFGFILE}" "$SERVICECFGPATH" 
       
-      # call through to container to restore anything there.
+      # call through to container to restore its backup in TEMPC.
       SCRIPTTORUN="${SERVICEPATH}/${SERVICEBINDIR}/restore"
       bash "$SCRIPTTORUN" "$SERVICENAME" "$IMAGENAME" "$TEMPC"
    )

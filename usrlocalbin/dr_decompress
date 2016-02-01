@@ -19,7 +19,7 @@ if [ "$#" -ne 1 ]; then die "PASS=? dr_decompress ARCHIVENAME" ; fi
 DESTFOLDER="/dst"
 ARCHIVEPATH="/src/$1"
 
-if [ ! -e "$ARCHIVEPATH" ]; then die "dr_decompress: No such archive: $ARCHIVEPATH"; fi
+if [ ! -e "$ARCHIVEPATH" ]; then ls /src ; die "dr_decompress: No such archive: $ARCHIVEPATH"; fi
 if [ ! -d "$DESTFOLDER" ]; then die "dr_decompress: Destination folder does not exist: $DESTFOLDER"; fi
  
 # default to empty string if doesn't exist, then test for empty string.
