@@ -1,7 +1,6 @@
 #!/bin/bash
 set -o nounset
 
-
 # ██████╗  ██████╗  ██████╗██╗  ██╗███████╗██████╗     ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗ 
 # ██╔══██╗██╔═══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗    ██╔══██╗██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗
 # ██║  ██║██║   ██║██║     █████╔╝ █████╗  ██████╔╝    ██████╔╝██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
@@ -17,6 +16,9 @@ set -o nounset
 #
 # ------------------------------------------------------------------
 
+# MYDIR - the directory this script is in and BUILDTIME - time image built.
+readonly MYDIR=$( dirname $(readlink -f "$0") )
+. ${MYDIR}/buildtime
 
 # Other global constanst from dr-install in this file.
 readonly DR_CFG_FILE="/etc/dr/dr.cfg"
@@ -96,6 +98,9 @@ cat <<'EOF' >&2
 
 NAME
    dr - docker runner
+
+VERSION
+   ${BUILDTIME}
    
 SYNOPSIS
    dr clean
