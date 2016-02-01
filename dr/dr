@@ -418,7 +418,7 @@ function restore {
    rm -r "${TEMPROOT}"   
    if [ $RVAL -ne 0 ]; then die "Restore failed. Temp files have been removed." ; fi
       
-   echo "Service ${SERVICENAME} has been restored successfully."
+   echo "The backup ${BACKUPFILE##*/} has been restored to ${SERVICENAME}."
 }
 
 #------------------------------------------------------------------------------------
