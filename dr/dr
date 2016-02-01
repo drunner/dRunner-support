@@ -17,8 +17,10 @@ set -o nounset
 # ------------------------------------------------------------------
 
 # MYDIR - the directory this script is in and BUILDTIME - time image built.
-readonly MYDIR=$( dirname $(readlink -f "$0") )
-. ${MYDIR}/buildtime
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+if [ ! -e "${MYDIR}/buildtime" ]; then BUILDTIME="BROKEN BUILD"
+else . "${MYDIR}/buildtime"
+fi
 
 # Other global constanst from dr-install in this file.
 readonly DR_CFG_FILE="/etc/dr/dr.cfg"
