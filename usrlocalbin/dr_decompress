@@ -30,5 +30,5 @@ else
    echo "WARNING: No password supplied.">&2
 fi
 
-7za x -so "${PASSCMD}" "${ARCHIVEPATH}" | tar xf - -C "${DESTFOLDER}"
+7za x -so "${PASSCMD}" "${ARCHIVEPATH}" 2>/dev/null | tar xf - -C "${DESTFOLDER}"
 if [ $? -ne 0 ]; then die "Failed to decompress archive. The password may be incorrect!"; fi

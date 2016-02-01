@@ -54,6 +54,4 @@ docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
 RVAL=$?
 docker rm "dr_decompress" >/dev/null 2>&1
 
-rm -r "$TEMPDIR"
-
 exit "$RVAL" 
