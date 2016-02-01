@@ -434,12 +434,6 @@ function main {
    if ! command_exists docker ; then die "Requires docker to be installed." ; fi
    if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
 
-   # Check basic commands are available
-   COMMANDS=(gpg wget md5sum 7z 7za)
-   for NEEDEDCMD in "${COMMANDS[@]}"; do
-   if ! command_exists "${NEEDEDCMD}" ; then die "${NEEDEDCMD} is not installed." ; fi
-   done
-
    # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE,  DRBINPATH
    initglobals
 
