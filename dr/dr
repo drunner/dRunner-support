@@ -94,7 +94,7 @@ function showservices {
 
 # showusage
 function showusage {
-cat <<'EOF' >&2
+cat <<EOF >&2
 
 NAME
    dr - docker runner
@@ -283,7 +283,7 @@ function update {
    
    # dr-install is downloaded from GitHub and put in /dr/support/dr-install by the Dockerfile,
    # then copied to the host in ${SUPPORTPATH} by dr-install that's run by the user.
-   "${TEMPDIR}/dr-install" "${ROOTPATH}"
+   bash "${TEMPDIR}/dr-install" "${ROOTPATH}"
    rm -r "${TEMPDIR}"
    exit 0
 }
