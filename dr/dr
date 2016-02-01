@@ -270,7 +270,9 @@ function install {
 
 #------------------------------------------------------------------------------------
 
+# update
 function update {
+   # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
    chmod a+rwx "${TEMPDIR}"
    docker run -i -t --name="get-dr-install" -v "${TEMPDIR}:/tempdir" \
@@ -281,8 +283,7 @@ function update {
    if [ "$RVAL" -ne 0 ]; then die "Unable to get dr-install.">&2 ; fi
    if [ ! -e "${TEMPDIR}/dr-install" ]; then die "dr-install mysteriously missing.">&2 ; fi
    
-   # dr-install is downloaded from GitHub and put in /dr/support/dr-install by the Dockerfile,
-   # then copied to the host in ${SUPPORTPATH} by dr-install that's run by the user.
+   # run it to update the installation.
    bash "${TEMPDIR}/dr-install" "${ROOTPATH}"
    rm -r "${TEMPDIR}"
    exit 0
