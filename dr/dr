@@ -189,7 +189,7 @@ function copydrfiles {
    if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
 
    # allow the container to write into this folder.
-   chown "${USERID}:root" "${SERVICEBINPATH}"
+   chown "${USERID}" "${SERVICEBINPATH}"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
    docker run --rm -it -v "${SERVICEBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /dr/* /tempcopy/"                             
@@ -276,7 +276,6 @@ function install {
 function update {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
-   chmod a+rwx "${TEMPDIR}"
    docker run -i -t --name="get-dr-install" -v "${TEMPDIR}:/tempdir" \
                "${SUPPORTIMAGE}" get-dr-install "/tempdir"
    local RVAL="$?"

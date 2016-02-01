@@ -45,7 +45,6 @@ if [ $? -ne 0 ]; then die "compress: Couldn't find destination path ${2}." ; fi
 ARCHIVENAME="$3"
 
 TEMPDIR="$(mktemp -d)"
-chmod a+rwx "${TEMPDIR}"
 
 docker run -i -t --name="dr_compress" -e "PASS=${PASS}" \
             -v "${SOURCE}:/src" -v "${TEMPDIR}:/dst" \

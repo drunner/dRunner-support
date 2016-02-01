@@ -54,7 +54,6 @@ if [ ! -e "${ARCHIVEFOLDER}/${ARCHIVENAME}" ]; then
 fi
  
 TEMPDIR="$(mktemp -d)"
-chmod a+rwx "${TEMPDIR}"
  
 docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
             -v "${ARCHIVEFOLDER}:/src" -v "${TEMPDIR}:/dst" \
