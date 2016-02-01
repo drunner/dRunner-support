@@ -9,11 +9,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # add in the assets.
-ADD ["./dr","/dr"]
-ADD ["./usrlocalbin","/usr/local/bin/"]
-RUN echo "BUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /dr/buildtime
-
-RUN chmod a+rx -R /usr/local/bin  &&  chmod a-w -R /dr
+COPY ["./dr","/dr"]
+COPY ["./usrlocalbin","/usr/local/bin/"]
+RUN echo "BUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /dr/buildtime && \
+      chmod a+rx -R /usr/local/bin  &&  \
+      chmod a-w -R /dr
 
 # expose volume
 VOLUME ["/config"]
