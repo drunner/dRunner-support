@@ -153,21 +153,6 @@ function getUSERID {
    USERID=$(docker run --rm -it "${IMAGENAME}" /bin/bash -c "id -u | tr -d '\r\n'")
 }
 
-#------------------------------------------------------------------------------------
-
-# checkimage 
-function checkimage {
-   if [ ! -e "${SUPPORTPATH}/validator" ]; then
-      die "Missing dr file: ${SUPPORTPATH}/validator"
-   fi
-   docker run --rm -v "${SUPPORTPATH}:/support" "${IMAGENAME}" /bin/bash -c "/support/validator"
-   if [ "$?" -ne 0 ]; then 
-      die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
-   fi
-   
-   echo "${IMAGENAME} is dr compatible.">&2
-}
-
 
 #------------------------------------------------------------------------------------
 
@@ -213,8 +198,23 @@ function destroy {
 
 #------------------------------------------------------------------------------------
 
-# createlaunchscript
-function createlaunchscript {
+# install_checkimage 
+function install_checkimage {
+   if [ ! -e "${SUPPORTPATH}/validator" ]; then
+      die "Missing dr file: ${SUPPORTPATH}/validator"
+   fi
+   docker run --rm -v "${SUPPORTPATH}:/support" "${IMAGENAME}" /bin/bash -c "/support/validator"
+   if [ "$?" -ne 0 ]; then 
+      die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
+   fi
+   
+   echo "${IMAGENAME} is dr compatible.">&2
+}
+
+#------------------------------------------------------------------------------------
+
+# install_createlaunchscript
+function install_createlaunchscript {
    local SCRIPTPATH="/usr/local/bin/${SERVICENAME}"
    cat <<EOF >"$SCRIPTPATH"
 #!/bin/bash
@@ -225,8 +225,8 @@ EOF
 
 #------------------------------------------------------------------------------------
 
-# create_variables - create the _variables file for the service's dr scripts.
-function create_variables { 
+# install_create_variables - create the _variables file for the service's dr scripts.
+function install_create_variables { 
    # create _variables file.
    if [ ! -e "${SERVICEBINPATH}/volumes" ]; then die "Missing volumes file for $SERVICENAME" ; fi
    source "${SERVICEBINPATH}/volumes"
@@ -257,8 +257,8 @@ EOF
 
 #------------------------------------------------------------------------------------
 
-# copydrfiles
-function copydrfiles {   
+# install_copydrfiles
+function install_copydrfiles {   
    # the directory that the container will update.
    if [ -d "${SERVICEBINPATH}" ]; then rm -r "${SERVICEBINPATH}" ; fi
    mkdir -p "${SERVICEBINPATH}"
@@ -285,18 +285,8 @@ function copydrfiles {
 
 #------------------------------------------------------------------------------------
 
-# initdrservice
-function createSERVICEPATH {
-   # can only call when service ROOTPATH not present (for safety)
-   if [ -d "${SERVICEPATH}" ]; then
-      echo "A service is already installed at ${SERVICEPATH}. Initialisation cancelled.">&2
-      echo "You might want   dr ${SERVICENAME} update  instead.">&2
-      exit 1
-   fi
-
-   copydrfiles
-   create_variables
-
+# install_checkReqdFiles
+function install_checkReqdFiles {
    # Check mandatory files made it over to host okay from the container.
    for HFILE in "${REQDFILES[@]}"; do
       if [ ! -e "${SERVICEBINPATH}/${HFILE}" ]; then 
@@ -309,34 +299,49 @@ function createSERVICEPATH {
 
 #------------------------------------------------------------------------------------
 
+# install_createVolumes
+function install_createVolumes {
+   # create the necessary volume containers.
+   local DNAME="dr-install-volcreate"
+   for VOLNAME in "${DOCKERVOLS[@]}"; do      
+      volexists "$VOLNAME"
+      if [ $? -ne 0 ]; then 
+         echo "A docker volume already exists for: $VOLNAME. Reusing it.";
+      else
+         docker volume create --name="$VOLNAME" >/dev/null
+         # set permissions on config volume
+         docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
+            /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
+         docker rm "$DNAME" >/dev/null 
+      fi
+   done     
+}
+#------------------------------------------------------------------------------------
+
 # install
 # global variables ready: ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, SERVICENAME, SERVICEPATH, SERVICEVARIABLESPATH, IMAGENAME
 function install {   
    if [ -z "$IMAGENAME" ]; then echo "dr install requires IMAGENAME.">&2 ; exit 1 ; fi
    if [ -z "$SERVICENAME" ]; then echo "dr install requires SERVICENAME.">&2 ; exit 1 ; fi
 
+   if [ -d "${SERVICEPATH}" ]; then
+      echo "A service is already installed at ${SERVICEPATH}. Initialisation cancelled.">&2
+      echo "You might want   dr ${SERVICENAME} update  instead.">&2
+      exit 1
+   fi
+
    ( # SUBSHELL
       set -e
       
-      checkimage
-      
-      local DNAME="dr-install"
-
-      createSERVICEPATH
-      
-      # create the standard config volume container.
-      docker volume create --name="dr-${SERVICENAME}-config" >/dev/null
-      # set permissions on config volume
-      docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
-         /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
-      docker rm "$DNAME" >/dev/null 
-      
-      # Run the install script, e.g. to create volume containers.
-      # todo: tidy up return/exit codes!         
-      bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"
-      
-      # allow direct execution of SERVICENAME without typing dr
-      createlaunchscript
+      install_checkimage
+      install_copydrfiles
+      install_create_variables
+      install_checkReqdFiles
+      install_createVolumes
+      install_createlaunchscript
+       
+      # Finally run the install script in the service.         
+      bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"      
    )
    if [ $? -ne 0 ]; then
       destroy
