@@ -482,7 +482,7 @@ function showservicehelp {
    local HELPSCRIPT="${SERVICEBINPATH}/help"
    if [ -e "${SERVICEVARIABLESPATH}" ] && [ -e "$HELPSCRIPT" ]; then
       source "$SERVICEVARIABLESPATH"
-      bash "${HELPSCRIPT}" "${SERVICENAME}" "${SERVICEIMAGENAME}"
+      bash "${HELPSCRIPT}" "${SERVICENAME}" "${IMAGENAME}"
       exit 0
    else
       showservices
