@@ -1,4 +1,6 @@
 #!/bin/bash
+set -o nounset
+set -e
 
 # ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗ 
 # ██║   ██║██╔══██╗██║     ██║██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗
@@ -22,12 +24,15 @@ if [ "$UID" -eq 0 ]; then
 fi
 
 # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
-readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
+readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" "volumes")
 for CFILE in "${REQDFILES[@]}"; do
    if [ ! -e "/dr/$CFILE" ]; then
       die "required file not present: /dr/$CFILE"
    fi
 done
+
+source /dr/volumes
+if [ ! -v VOLUMES ]; then die "volumes file did not define variable VOLUMES"; fi
 
 exit 0
 
