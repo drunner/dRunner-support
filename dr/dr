@@ -168,6 +168,49 @@ function checkimage {
    echo "${IMAGENAME} is dr compatible.">&2
 }
 
+
+#------------------------------------------------------------------------------------
+
+# destroy
+# destroys everything we can about a service!
+function destroy {   
+   if [ -v SERVICEVARIABLESPATH ] && [ -e "$SERVICEVARIABLESPATH" ]; then
+      source "$SERVICEVARIABLESPATH"
+   fi   
+   
+   # call destroy in service.
+   if [ -v SERVICEBINPATH ] && [ -e "${SERVICEBINPATH}/destroy" ]; then 
+      echo "Calling destroy from within service."
+      bash "${SERVICEBINPATH}/destroy"
+   fi
+   
+   # remove volume container.
+   if [ -v DOCKERVOLS ]; then
+      for VOLNAME in "${DOCKERVOLS[@]}"; do      
+         echo "Destroying volume $VOLNAME."
+         docker volume rm "$VOLNAME" >/dev/null
+      done
+   fi
+   
+   # remove launch script
+   if [ -v SERVICENAME ] && [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
+      echo "Removing command $SERVICENAME."
+      rm "/usr/local/bin/${SERVICENAME}"
+   fi
+   
+   # delete service directoy.
+   if [ -v SERVICEPATH ] && [ -d "${SERVICEPATH}" ]; then
+      echo "Removing all service files from ${SERVICEPATH}."
+      rm -r "${SERVICEPATH}"
+   fi
+   
+   if [ -v SERVICENAME ]; then
+      echo "Service $SERVICENAME has been destroyed."
+   else
+      echo "No service specified."
+   fi
+}
+
 #------------------------------------------------------------------------------------
 
 # createlaunchscript
@@ -272,25 +315,33 @@ function install {
    if [ -z "$IMAGENAME" ]; then echo "dr install requires IMAGENAME.">&2 ; exit 1 ; fi
    if [ -z "$SERVICENAME" ]; then echo "dr install requires SERVICENAME.">&2 ; exit 1 ; fi
 
-   checkimage
-   
-   local DNAME="dr-install"
+   ( # SUBSHELL
+      set -e
+      
+      checkimage
+      
+      local DNAME="dr-install"
 
-   createSERVICEPATH
-   
-   # create the standard config volume container.
-   docker volume create --name="dr-${SERVICENAME}-config" >/dev/null
-   # set permissions on config volume
-   docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
-      /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
-   docker rm "$DNAME" >/dev/null 
-    
-   # Run the install script, e.g. to create volume containers.
-   # todo: tidy up return/exit codes!         
-   bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"
-   
-   # allow direct execution of SERVICENAME without typing dr
-   createlaunchscript
+      createSERVICEPATH
+      
+      # create the standard config volume container.
+      docker volume create --name="dr-${SERVICENAME}-config" >/dev/null
+      # set permissions on config volume
+      docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
+         /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
+      docker rm "$DNAME" >/dev/null 
+      
+      # Run the install script, e.g. to create volume containers.
+      # todo: tidy up return/exit codes!         
+      bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"
+      
+      # allow direct execution of SERVICENAME without typing dr
+      createlaunchscript
+   )
+   if [ $? -ne 0 ]; then
+      destroy
+      die "Installation failed. System returned to clean state."
+   fi
     
    # TODO: If we had errors then destroy everything!
    echo "Installation of service ${SERVICENAME} successful."
@@ -316,28 +367,6 @@ function update {
    exit 0
 }
 
-#------------------------------------------------------------------------------------
-
-# destroy
-# global variables ready: ROOTPATH, DRSERVICESPATH, SUPPORTIMAGE, SERVICENAME, SERVICEPATH, SERVICEVARIABLESPATH, IMAGENAME
-function destroy {
-   if [ -z "$SERVICENAME" ]; then die "dr destroy requires SERVICENAME to be set." ; fi
-   if [ ! -d "$SERVICEPATH" ]; then echo "The service ${SERVICENAME} does not exist.">&2 ; showservices ; exit 1 ; fi
-   
-   # call destroy in service.
-   if [ -e "${SERVICEBINPATH}/destroy" ]; then bash "${SERVICEBINPATH}/destroy" ; fi
-   
-   # remove volume container.
-   for VOLNAME in "${DOCKERVOLS[@]}"; do      
-      docker volume rm "$VOLNAME" >/dev/null
-   done
-   
-   # remove launch script
-   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then rm "/usr/local/bin/${SERVICENAME}" ; fi
-   
-   # delete service directoy.
-   rm -r "${SERVICEPATH}"
-}
 
 #------------------------------------------------------------------------------------
 
@@ -451,8 +480,8 @@ function restore {
 
 function showservicehelp {
    local HELPSCRIPT="${SERVICEBINPATH}/help"
-   if [ -e "${HELPSCRIPT}" ]; then
-      . "$SERVICECFGPATH"
+   if [ -e "${SERVICEVARIABLESPATH}" ] && [ -e "$HELPSCRIPT" ]; then
+      source "$SERVICEVARIABLESPATH"
       bash "${HELPSCRIPT}" "${SERVICENAME}" "${SERVICEIMAGENAME}"
       exit 0
    else
@@ -497,7 +526,7 @@ function main {
    fi     
 
    # all other commands have SERVICENAME as first argument.
-   readonly SERVICENAME="$1"
+   SERVICENAME="$1"
    readonly SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
    readonly SERVICEBINPATH="${SERVICEPATH}/bin"
    readonly SERVICEVARIABLESPATH="${SERVICEBINPATH}/_variables"
@@ -511,7 +540,7 @@ function main {
    USERCOMMAND="$2"
    shift 2
 
-   # HANDLE COMMANDS FOR A SERVICE THAT MIGHT NOT EXIST YET. We can't just read IMAGENAME from the service cfg.
+   # HANDLE COMMANDS FOR A SERVICE THAT MIGHT BE BROKEN OR NOT EXIST YET. 
    case "$USERCOMMAND" in
       install)
          if [ "$#" -eq 1 ]; then
@@ -533,12 +562,17 @@ function main {
             dieusage "[PASS=?] dr SERVICENAME restore BACKUPFILE"
          fi
          ;;
+
+      destroy)
+         destroy 
+         ;;         
+
       esac
    
    # -------------------------------------
    
-   # If we've reached here then SERVICENAME is expected to exist. 
-   # Read in SERVICEIMAGENAME from config file. 
+   # If we've reached here then the service is expected to be okay.
+   # Read in _variables from the service.
    if [ ! -d "$SERVICEPATH" ]; then showservices ; die "Service $SERVICENAME does not exist." ; fi
    if [ ! -e "$SERVICEVARIABLESPATH" ]; then die "Service ${SERVICENAME} is corrupt (missing its _variables file)." ; fi
    source "$SERVICEVARIABLESPATH"
@@ -548,11 +582,7 @@ function main {
       update)
          copydrfiles
          ;;
-         
-      destroy)
-         destroy 
-         ;;         
-         
+                  
       backup)
          if [ "$#" -eq 1 ]; then
             backup "$1"
