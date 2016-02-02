@@ -583,6 +583,10 @@ function main {
    # HANDLE COMMANDS FOR AN EXISTING SERVICE
    case "$USERCOMMAND" in
       update)
+         # ensure we have the latest support image. Issue here in that we don't update any other
+         # images within the container.
+         docker pull "${IMAGENAME}"
+         if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
          recreateServiceBinPath
          ;;
                   
