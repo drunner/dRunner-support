@@ -331,7 +331,7 @@ function install {
    fi
 
    ( # SUBSHELL
-      set -e
+     # set -e
       
       install_checkimage
       install_copydrfiles
@@ -570,6 +570,7 @@ function main {
 
       destroy)
          destroy 
+         exit 0
          ;;         
 
       esac
