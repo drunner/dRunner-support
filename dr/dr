@@ -187,7 +187,7 @@ function create_variables {
    # create _variables file.
    if [ ! -e "${SERVICEBINPATH}/volumes" ]; then die "Missing volumes file for $SERVICENAME" ; fi
    source "${SERVICEBINPATH}/volumes"
-   if [ ! -e "${VOLUMES}" ]; then die "volumes file did not contain a volumes definition!" ; fi
+   if [ ! -v VOLUMES ]; then die "volumes file did not contain a volumes definition!" ; fi
    DOCKERVOLS=( )
    DOCKEROPTS=( )
    for i in "${!VOLUMES[@]}"; do
