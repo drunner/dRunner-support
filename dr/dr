@@ -71,6 +71,8 @@ function initglobals {
    checkdir "${DRSERVICESPATH}" "DRSERVICESPATH"
    checkdir "${DRBINPATH}" "DRBINPATH"
    
+   if [ ! -v PULLONUPDATE ]; then die "Installation broken. Configuration file ${DR_CFG_FILE} doesn't set PULLONUPDATE."; fi
+   
    readonly SUPPORTPATH="${DRBINPATH}/support"
 }
 
@@ -351,7 +353,7 @@ function install {
 
 #------------------------------------------------------------------------------------
 
-# update
+# update - udpates docker runner.
 function update {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
@@ -364,7 +366,7 @@ function update {
    if [ ! -e "${TEMPDIR}/dr-install" ]; then die "dr-install mysteriously missing.">&2 ; fi
    
    # run it to update the installation.
-   bash "${TEMPDIR}/dr-install" "${ROOTPATH}"
+   bash "${TEMPDIR}/dr-install" "${ROOTPATH}" "${PULLONUPDATE}"
    rm -r "${TEMPDIR}"
    exit 0
 }
@@ -585,8 +587,10 @@ function main {
       update)
          # ensure we have the latest support image. Issue here in that we don't update any other
          # images within the container.
-         docker pull "${IMAGENAME}"
-         if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
+         if [ "$PULLONUPDATE" -eq 1 ]; then
+            docker pull "${IMAGENAME}"
+            if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
+         fi
          recreateServiceBinPath
          ;;
                   
