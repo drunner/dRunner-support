@@ -443,6 +443,9 @@ function restore {
       # decompress the main backup
       cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
       "${SUPPORTPATH}/decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
+
+      # set IMAGENAME - the only missing global var.
+      . "${TEMPPARENT}/_variables"
          
       # check backup has key files.
       if [ ! -e "$TEMPC" ]; then die "Backup corrupt. Missing ${TEMPC}."; fi
@@ -450,9 +453,6 @@ function restore {
          if [ ! -e "${NEEDEDFILE}.tar.7z" ]; then die "Backup corrupt. Missing backup file for docker volume ${NEEDEDFILE}."; fi
       done
       
-      # set IMAGENAME - the only missing global var.
-      . "${TEMPPARENT}/_variables"
-
       # now can install base service
       install
          
