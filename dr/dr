@@ -452,6 +452,10 @@ function restore {
       "${SUPPORTPATH}/decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
 
       # loads the old DOCKERVOLS and IMAGENAME
+      
+      This is buggy and reading arrays as strings. :/
+      Dont want it to overwrite SERVICENAME.
+      
       while read line; do
          [[ $line =~ DOCKERVOLS= ]] && declare "$line" && break
          [[ $line =~ IMAGENAME= ]] && declare "$line" && break
