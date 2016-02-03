@@ -46,6 +46,9 @@ ARCHIVENAME="$3"
 
 TEMPDIR="$(mktemp -d)"
 
+# ensure PASS exists.
+[ -v PASS ] || PASS=""
+
 docker run -i -t --name="dr_compress" -e "PASS=${PASS}" \
             -v "${SOURCE}:/src" -v "${TEMPDIR}:/dst" \
             j842/dr-support dr_compress "${ARCHIVENAME}"

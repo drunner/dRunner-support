@@ -245,15 +245,19 @@ function install_checkReqdFiles {
 function install_createVolumes {
    # create the necessary volume containers.
    local DNAME="dr-install-volcreate"
-   for VOLNAME in "${DOCKERVOLS[@]}"; do      
-      volexists "$VOLNAME"
-      if [ $? -ne 0 ]; then 
+   local DVOL=""
+   local DPATH=""
+   for i in "${!DOCKERVOLS[@]}"; do      
+      VOLNAME="${DOCKERVOLS[i]}"
+      VOLPATH="${VOLUMES[i]}"
+
+      if volexists "$VOLNAME" ; then 
          echo "A docker volume already exists for: $VOLNAME. Reusing it.";
       else
-         docker volume create --name="$VOLNAME" >/dev/null
+         docker volume create --name="$DNAME" >/dev/null
          # set permissions on config volume
-         docker run --name="$DNAME" -v "dr-${SERVICENAME}-config:/config" "${COPYIMAGE}" \
-            /bin/bash -c "chown ${USERID}:root /config && date >> /config/install_date"
+         docker run --name="$DNAME" -v "${VOLNAME}:${VOLPATH}" "${COPYIMAGE}" \
+            /bin/bash -c "chown ${USERID}:root ${VOLPATH} && date >> ${VOLPATH}/install_date"
          docker rm "$DNAME" >/dev/null 
       fi
    done     
@@ -408,6 +412,7 @@ function backup {
          volexists "$VOLNAME"
          if [ $? -ne 0 ]; then die "A docker volume required for the backup was missing: $VOLNAME"; fi
          "${SUPPORTPATH}/compress" "$VOLNAME" "${TEMPF}" "${VOLNAME}.tar.7z"
+         if [ ! -e "${TEMPF}/${VOLNAME}.tar.7z" ]; then die "Unable to back up ${VOLNAME}." ; fi
       done      
       
       # Compress everything with password
@@ -446,21 +451,32 @@ function restore {
       cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
       "${SUPPORTPATH}/decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
 
-      # set IMAGENAME - the only missing global var.
-      . "${TEMPPARENT}/_variables"
+      # loads the old DOCKERVOLS and IMAGENAME
+      while read line; do
+         [[ $line =~ DOCKERVOLS= ]] && declare "$line" && break
+         [[ $line =~ IMAGENAME= ]] && declare "$line" && break
+      done < "${TEMPPARENT}/_variables"
+      OLDDOCKERVOLS=("${DOCKERVOLS[@]}")
          
       # check backup has key files.
       if [ ! -e "$TEMPC" ]; then die "Backup corrupt. Missing ${TEMPC}."; fi
       for NEEDEDFILE in "${DOCKERVOLS[@]}"; do
-         if [ ! -e "${NEEDEDFILE}.tar.7z" ]; then die "Backup corrupt. Missing backup file for docker volume ${NEEDEDFILE}."; fi
+         if [ ! -e "${TEMPF}/${NEEDEDFILE}.tar.7z" ]; then die "Backup corrupt. Missing backup file for docker volume ${NEEDEDFILE}."; fi
       done
       
-      # now can install base service
+      # now can install base service. Updates DOCKERVOLS.
       install
          
       # restore volumes.
-      for VOLNAME in "${DOCKERVOLS[@]}"; do      
-         "${SUPPORTPATH}/decompress" "$VOLNAME" "${TEMPF}" "${VOLNAME}.tar.7z"
+      # zip file names are based on the _old_ DOCKERVOLS, new volume name based on hte new ones.
+      if [ "${#OLDDOCKERVOLS[@]}" -gt "${#DOCKERVOLS[@]}" ]; then die "The number of volume containers the image requires has decreased. Not safe to restore." ; fi
+      if [ "${#OLDDOCKERVOLS[@]}" -lt "${#DOCKERVOLS[@]}" ]; then echo "The number of volume containers the image specifies has increased. We'll restore what we can, but this container might not work :/" ; fi
+
+      for i in "${!OLDDOCKERVOLS[@]}"; do      
+         OLDVOLNAME="${OLDDOCKERVOLS[i]}"
+         NEWVOLNAME="${DOCKERVOLS[i]}"
+         
+         "${SUPPORTPATH}/decompress" "$NEWVOLNAME" "${TEMPF}" "${OLDVOLNAME}.tar.7z"
       done
 
       # We restore our backed up _variables.

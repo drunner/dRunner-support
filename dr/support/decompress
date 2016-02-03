@@ -47,6 +47,9 @@ ARCHIVENAME="$3"
 if [ ! -e "${ARCHIVEFOLDER}/${ARCHIVENAME}" ]; then 
    die "decompress: archive does not exist: ${ARCHIVEFOLDER}/${ARCHIVENAME}"; 
 fi
+
+# ensure PASS exists.
+[ -v PASS ] || PASS=""
   
 docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
             -v "${ARCHIVEFOLDER}:/src" -v "${DEST}:/dst" \
