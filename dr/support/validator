@@ -31,7 +31,7 @@ for CFILE in "${REQDFILES[@]}"; do
    fi
 done
 
-source /dr/service.cfg
+source /dr/service.cfg "MY_SERVICENAME"
 if [ ! -v VOLUMES ]; then die "service.cfg file did not define variable VOLUMES"; fi
 if [ ! -v CONTAINERS ]; then die "service.cfg file did not define variable CONTAINERS"; fi
 
