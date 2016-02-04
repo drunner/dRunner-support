@@ -333,19 +333,16 @@ function install {
       echo "You might want   dr ${SERVICENAME} update  instead.">&2
       exit 1
    fi
-
-   ( # SUBSHELL
-     # set -e
       
-      install_checkimage
-      recreateServiceBinPath
-      install_checkReqdFiles
-      install_createVolumes
-      install_createlaunchscript
-       
-      # Finally run the install script in the service.         
-      bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"      
-   )
+   install_checkimage
+   recreateServiceBinPath
+   install_checkReqdFiles
+   install_createVolumes
+   install_createlaunchscript
+      
+   # Finally run the install script in the service.         
+   bash "${SERVICEBINPATH}/install" "${SERVICENAME}" "${IMAGENAME}"      
+   
    if [ $? -ne 0 ]; then
       destroy
       die "Installation failed. System returned to clean state."
