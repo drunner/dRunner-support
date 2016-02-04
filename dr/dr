@@ -300,7 +300,7 @@ function recreateServiceBinPath {
    if [ ! -e "${SERVICEBINPATH}/${SERVICECFG}" ]; then die "Missing $SERVICECFG file for $SERVICENAME" ; fi
    if [ ! -v SERVICENAME ]; then die "SERVICENAME undefined." ; fi
 
-   source "${SERVICEBINPATH}/${SERVICECFG}" "$SERVICENAME"
+   source "${SERVICEBINPATH}/${SERVICECFG}"
    
    for i in "${!VOLUMES[@]}"; do
       DOCKERVOLS[$((i))]="dr-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
@@ -361,8 +361,8 @@ function install {
 
 #------------------------------------------------------------------------------------
 
-# update - udpates docker runner.
-function update {
+# updatedr - udpates docker runner.
+function updatedr {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
    docker run -i -t --name="get-dr-install" -v "${TEMPDIR}:/tempdir" \
@@ -377,6 +377,26 @@ function update {
    bash "${TEMPDIR}/dr-install" "${ROOTPATH}" "${PULLONUPDATE}"
    rm -r "${TEMPDIR}"
    exit 0
+}
+
+
+# updateservice - udpates the service.
+function updateservice {
+   # ensure we have the latest support image. Issue here in that we don't update any other
+   # images within the container.
+   if [ "$PULLONUPDATE" -eq 1 ]; then
+      docker pull "${IMAGENAME}"
+      if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
+      
+      if [ -v CONTAINERS ]; then
+         for CONTNAME in "${CONTAINERS[@]}"; do
+            docker pull "${CONTNAME}"
+            if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${CONTNAME}." ; fi
+         done
+      fi
+         
+   fi
+   recreateServiceBinPath
 }
 
 
@@ -553,7 +573,7 @@ function main {
       showservices 
       exit 0
    elif [ "$1" = "update" ]; then
-      update
+      updatedr
       exit 0
    fi     
 
@@ -613,13 +633,7 @@ function main {
    # HANDLE COMMANDS FOR AN EXISTING SERVICE
    case "$USERCOMMAND" in
       update)
-         # ensure we have the latest support image. Issue here in that we don't update any other
-         # images within the container.
-         if [ "$PULLONUPDATE" -eq 1 ]; then
-            docker pull "${IMAGENAME}"
-            if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
-         fi
-         recreateServiceBinPath
+         updateservice
          ;;
                   
       backup)
