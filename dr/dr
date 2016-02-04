@@ -295,7 +295,8 @@ function recreateServiceBinPath {
    
    # create _variables file.
    if [ ! -e "${SERVICEBINPATH}/${SERVICECFG}" ]; then die "Missing $SERVICECFG file for $SERVICENAME" ; fi
-   source "${SERVICEBINPATH}/${SERVICECFG}"
+   if [ ! -v SERVICENAME ]; then die "SERVICENAME undefined." ; fi
+   source "${SERVICEBINPATH}/${SERVICECFG}" "$SERVICENAME"
    if [ ! -v VOLUMES ]; then die "$SERVICECFG file did not contain a VOLUMES definition!" ; fi
    if [ ! -v CONTAINERS ]; then die "$SERVICECFG file did not contain a CONTAINERS definition!" ; fi
    DOCKERVOLS=( )
