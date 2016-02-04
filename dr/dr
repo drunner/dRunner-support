@@ -484,8 +484,11 @@ function restore {
       bash "${SERVICEBINPATH}/restore" "$TEMPC"
    )
    RVAL="$?"
-   rm -r "${TEMPROOT}"   
-   if [ $RVAL -ne 0 ]; then die "Restore failed. Temp files have been removed." ; fi
+   rm -r "${TEMPROOT}"  
+   if [ $RVAL -ne 0 ]; then 
+      if [ -e "${SERVICEPATH}" ]; then destroy ; fi
+      die "Restore failed. Temp files have been removed, system back in clean state."
+   fi
       
    echo "The backup ${BACKUPFILE##*/} has been restored to ${SERVICENAME}."
    
