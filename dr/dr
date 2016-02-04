@@ -30,6 +30,7 @@ readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
 readonly COPYIMAGE="j842/dr-baseimage-alpine"
 
 readonly BACKUP_MAIN="backup.tar.7z"
+readonly SERVICECFG="service.cfg"
 
 #------------------------------------------------------------------------------------
 
@@ -293,9 +294,10 @@ function recreateServiceBinPath {
    chmod -R a-w "${SERVICEBINPATH}"
    
    # create _variables file.
-   if [ ! -e "${SERVICEBINPATH}/volumes" ]; then die "Missing volumes file for $SERVICENAME" ; fi
-   source "${SERVICEBINPATH}/volumes"
-   if [ ! -v VOLUMES ]; then die "volumes file did not contain a volumes definition!" ; fi
+   if [ ! -e "${SERVICEBINPATH}/${SERVICECFG}" ]; then die "Missing $SERVICECFG file for $SERVICENAME" ; fi
+   source "${SERVICEBINPATH}/${SERVICECFG}"
+   if [ ! -v VOLUMES ]; then die "$SERVICECFG file did not contain a VOLUMES definition!" ; fi
+   if [ ! -v CONTAINERS ]; then die "$SERVICECFG file did not contain a CONTAINERS definition!" ; fi
    DOCKERVOLS=( )
    DOCKEROPTS=( )
    for i in "${!VOLUMES[@]}"; do
