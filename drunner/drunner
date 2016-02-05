@@ -617,8 +617,6 @@ function processServiceCommands {
          elif elementIn "$3" "${REQDFILES[@]}"; then 
             die "$3 is a reserved word. Try ${STARTCODE}drunner ${3} ${SERVICENAME}${ENDCODE} instead."
          else
-            echo "3 = $3"
-            echo "REQDFILES = ${REQDFILES[@]}"
             SCRIPTTORUN="${SERVICEBINPATH}/${3}"
             shift 3
             if [ -e "${SCRIPTTORUN}" ]; then
