@@ -28,11 +28,12 @@ fi
 readonly DR_CFG_FILE="/etc/drunner/drunner.cfg"
 
 # Global constants.
-readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
+readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" "update")
 readonly COPYIMAGE="drunner/baseimage-alpine"
-
 readonly BACKUP_MAIN="backup.tar.7z"
 readonly SERVICECFG="service.cfg"
+readonly STARTCODE="\e[32m"
+readonly ENDCODE="\e[0m"
 
 #------------------------------------------------------------------------------------
 
@@ -326,6 +327,7 @@ DOCKEROPTS=($STR_DOCKEROPTS)
 SERVICENAME="${SERVICENAME}"
 IMAGENAME="${IMAGENAME}"
 INSTALLTIME="${DATESTAMP}"
+DRUNNERSUPPORTIMAGE="${SUPPORTIMAGE}"
 EOF
 }
 
@@ -376,7 +378,7 @@ function updatedr {
    if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
    
    # run it to update the installation.
-   bash "${TEMPDIR}/drunner-install" "${ROOTPATH}" "${PULLONUPDATE}"
+   bash "${TEMPDIR}/drunner-install" "${ROOTPATH}" "${PULLONUPDATE}" "${SUPPORTIMAGE}"
    rm -r "${TEMPDIR}"
    exit 0
 }
@@ -573,6 +575,16 @@ function readVariables {
 
 #------------------------------------------------------------------------------------
 
+# elementIn element array
+# if elementIn "a string" "${array[@]}" ; then ...
+function elementIn {
+  local e
+  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+  return 1
+}
+
+#------------------------------------------------------------------------------------
+
 # processServiceCommands ARGS
 function processServiceCommands {
    case "$1" in
@@ -602,7 +614,12 @@ function processServiceCommands {
       servicecmd)
          if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
             showservicehelp
+         elif elementIn "$3" "${REQDFILES[@]}"; then 
+            echo -e "$3 is a reserved word. Did you mean to use ${STARTCODE}drunner ${3} ${SERVICENAME}${ENDCODE}?">&2
+            exit 1
          else
+            echo "3 = $3"
+            echo "REQDFILES = ${REQDFILES[@]}"
             SCRIPTTORUN="${SERVICEBINPATH}/${3}"
             shift 3
             if [ -e "${SCRIPTTORUN}" ]; then
