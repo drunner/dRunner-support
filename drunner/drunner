@@ -598,7 +598,7 @@ function processServiceCommands {
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
-         if [ "$#" -lt 3 ]; then
+         if [ "$#" -lt 3 ] || [ "$3" -eq "help" ]; then
             showservicehelp
          else
             SCRIPTTORUN="${SERVICEBINPATH}/${3}"
