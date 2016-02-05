@@ -23,7 +23,7 @@ else . "${MYDIR}/buildtime"
 fi
 
 # Other global constanst from dr-install in this file.
-readonly DR_CFG_FILE="/etc/drunner/dr.cfg"
+readonly DR_CFG_FILE="/etc/drunner/drunner.cfg"
 
 # Global constants.
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
