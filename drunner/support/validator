@@ -26,12 +26,12 @@ fi
 # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" "update" "service.cfg")
 for CFILE in "${REQDFILES[@]}"; do
-   if [ ! -e "/dr/$CFILE" ]; then
-      die "required file not present: /dr/$CFILE"
+   if [ ! -e "/drunner/$CFILE" ]; then
+      die "required file not present: /drunner/$CFILE"
    fi
 done
 
-source /dr/service.cfg "MY_SERVICENAME"
+source /drunner/service.cfg "MY_SERVICENAME"
 
 exit 0
 
