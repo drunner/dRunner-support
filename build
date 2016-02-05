@@ -13,7 +13,7 @@ else
   TAG=":${BRANCH}"
 fi
 
-TARGET="${IMAGENAME}/support${TAG}"
+TARGET="${IMAGENAME}${TAG}"
 
 docker build -t "$TARGET" .
 
