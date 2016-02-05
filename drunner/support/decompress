@@ -53,7 +53,7 @@ fi
   
 docker run -i -t --name="dr_decompress" -e "PASS=${PASS}" \
             -v "${ARCHIVEFOLDER}:/src" -v "${DEST}:/dst" \
-            j842/dr-support dr_decompress "${ARCHIVENAME}"
+            drunner/support dr_decompress "${ARCHIVENAME}"
 RVAL=$?
 docker rm "dr_decompress" >/dev/null 2>&1
 

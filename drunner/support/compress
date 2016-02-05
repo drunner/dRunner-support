@@ -51,7 +51,7 @@ TEMPDIR="$(mktemp -d)"
 
 docker run -i -t --name="dr_compress" -e "PASS=${PASS}" \
             -v "${SOURCE}:/src" -v "${TEMPDIR}:/dst" \
-            j842/dr-support dr_compress "${ARCHIVENAME}"
+            drunner/support dr_compress "${ARCHIVENAME}"
 RVAL=$?
 docker rm "dr_compress" >/dev/null 2>&1
 
