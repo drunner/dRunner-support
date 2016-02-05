@@ -556,6 +556,9 @@ function setServiceName {
    readonly SERVICEVARIABLESPATH="${SERVICEBINPATH}/_variables"
 }
 
+#------------------------------------------------------------------------------------
+
+# readVariables
 function readVariables {
    # Read in _variables from the service.
    if [ ! -d "$SERVICEPATH" ]; then showservices ; die "Service $SERVICENAME does not exist." ; fi
@@ -590,11 +593,12 @@ function processServiceCommands {
          fi
          ;;
          
+      # servicecmd SERVICENAME COMMAND
       servicecmd)
-         if [ "$#" -lt 2 ]; then
+         if [ "$#" -lt 3 ]; then
             showservicehelp
          else
-            SCRIPTTORUN="${SERVICEBINPATH}/${2}"
+            SCRIPTTORUN="${SERVICEBINPATH}/${3}"
             shift 2
             if [ -e "${SCRIPTTORUN}" ]; then
                bash "${SCRIPTTORUN}" "$@"
