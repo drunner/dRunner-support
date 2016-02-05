@@ -243,8 +243,6 @@ function install_checkReqdFiles {
 function install_createVolumes {
    # create the necessary volume containers.
    local DNAME="dr-install-volcreate"
-   local DVOL=""
-   local DPATH=""
    
    if [ -v VOLUMES ]; then
       for i in "${!DOCKERVOLS[@]}"; do      
@@ -551,7 +549,7 @@ function showservicehelp {
 
 # setServiceName SERVICENAME
 function setServiceName {
-   if [ -z "$1"]; then die "SERVICENAME was not specified!" ; fi
+   if [ -z "$1" ]; then die "SERVICENAME was not specified!" ; fi
    SERVICENAME="$1"
    readonly SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
    readonly SERVICEBINPATH="${SERVICEPATH}/bin"
