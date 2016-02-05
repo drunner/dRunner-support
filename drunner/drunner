@@ -601,7 +601,7 @@ function processServiceCommands {
             showservicehelp
          else
             SCRIPTTORUN="${SERVICEBINPATH}/${3}"
-            shift 2
+            shift 3
             if [ -e "${SCRIPTTORUN}" ]; then
                bash "${SCRIPTTORUN}" "$@"
             else
