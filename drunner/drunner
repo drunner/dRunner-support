@@ -665,7 +665,7 @@ function processdRunnerCommands {
             exit 0
          fi
          setServiceName "$3"         
-         restore "$1"
+         restore "$2"
          exit 0
          ;;
 
