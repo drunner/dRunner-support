@@ -113,24 +113,21 @@ VERSION
    ${BUILDTIME}
    
 SYNOPSIS
-   dr clean
-   dr list
-   dr update
+   drunner clean
+   drunner list
+   drunner update
    
-   [PASS=?] dr SERVICENAME backup BACKUPFILE
-   [PASS=?] dr SERVICENAME restore BACKUPFILE
-   dr SERVICENAME install IMAGENAME
-   dr SERVICENAME update
-   dr SERVICENAME destroy
+   [PASS=?] drunner backup  SERVICENAME BACKUPFILE
+   [PASS=?] drunner restore BACKUPFILE  SERVICENAME  
    
-   dr SERVICENAME
-   dr SERVICENAME enter
-   dr SERVICENAME COMMAND ARGS
+   drunner install IMAGENAME [SERVICENAME]
+   drunner update  SERVICENAME
+   drunner destroy SERVICENAME
+   drunner enter   SERVICENAME
    
-   Once SERVICENAME is installed you can call it directly, e.g.
-   SERVICENAME update
-   This convenience just calls through to  dr SERVICENAME update .
-
+   SERVICENAME
+   SERVICENAME COMMAND ARGS
+   
 DESCRIPTION
    Provides a standard way to manage and run containers supporting dr.
    Intended to be used both manually and via Ansible.
@@ -221,7 +218,7 @@ function install_createlaunchscript {
    local SCRIPTPATH="/usr/local/bin/${SERVICENAME}"
    cat <<EOF >"$SCRIPTPATH"
 #!/bin/bash
-dr ${SERVICENAME} "\$@"
+drunner servicecmd ${SERVICENAME} "\$@"
 EOF
    chmod a+x "$SCRIPTPATH"
 }
@@ -552,6 +549,135 @@ function showservicehelp {
 
 #------------------------------------------------------------------------------------
 
+# setServiceName SERVICENAME
+function setServiceName {
+   if [ -z "$1"]; then die "SERVICENAME was not specified!" ; fi
+   SERVICENAME="$1"
+   readonly SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
+   readonly SERVICEBINPATH="${SERVICEPATH}/bin"
+   readonly SERVICEVARIABLESPATH="${SERVICEBINPATH}/_variables"
+}
+
+function readVariables {
+   # Read in _variables from the service.
+   if [ ! -d "$SERVICEPATH" ]; then showservices ; die "Service $SERVICENAME does not exist." ; fi
+   if [ ! -e "$SERVICEVARIABLESPATH" ]; then die "Service ${SERVICENAME} is corrupt (missing its _variables file)." ; fi
+   source "$SERVICEVARIABLESPATH"   
+}
+
+
+#------------------------------------------------------------------------------------
+
+# processServiceCommands ARGS
+function processServiceCommands {
+   case "$1" in
+      update)
+         updateservice
+         ;;
+                  
+      backup)
+         if [ "$#" -eq 3 ]; then
+            backup "$3"
+         else
+            dieusage "[PASS=?] drunner backup SERVICENAME BACKUPFILE"
+         fi
+         ;;
+         
+      enter)
+         if [ "$#" -lt 2 ]; then
+            showservicehelp
+         else
+            SCRIPTTORUN="${SERVICEBINPATH}/enter"
+            bash "${SCRIPTTORUN}"
+         fi
+         ;;
+         
+      servicecmd)
+         if [ "$#" -lt 2 ]; then
+            showservicehelp
+         else
+            SCRIPTTORUN="${SERVICEBINPATH}/${2}"
+            shift 2
+            if [ -e "${SCRIPTTORUN}" ]; then
+               bash "${SCRIPTTORUN}" "$@"
+            else
+               showservicehelp
+            fi
+         fi
+         ;;
+
+      *)
+         showservicehelp
+   esac     
+}
+
+
+#------------------------------------------------------------------------------------
+
+# processdRunnerCommands ARGS
+function processdRunnerCommands {
+   
+   # start with high level commands (clean, list, update), and commands on a service
+   # that do not expect the service to be fully configured (install, restore, destroy)
+   case "$1" in 
+      clean)
+         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
+         exit 0
+         ;;
+         
+      list)
+         showservices
+         exit 0
+         ;;
+         
+      update)
+         if [ "$#" -eq 1 ]; then
+            updatedr
+            exit 0
+         fi
+         # otherwise fall through - we want to update the service.
+         ;;
+         
+      install)
+         if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+            dieusage "drunner install IMAGENAME [SERVICENAME]"
+         fi
+         
+         IMAGENAME="$2"
+         if [ "$#" -eq 3 ]; then 
+            setServiceName "$3" 
+         else
+            setServiceName "${IMAGENAME##*/}"
+         fi
+         
+         install
+         exit 0
+         ;;
+
+      restore)
+         if [ "$#" -ne 3 ]; then
+            dieusage "[PASS=?] drunner restore BACKUPFILE  SERVICENAME  "
+            exit 0
+         fi
+         setServiceName "$3"         
+         restore "$1"
+         exit 0
+         ;;
+
+      destroy)
+         if [ "$#" -ne 2 ]; then
+            dieusage "[PASS=?] drunner destroy SERVICENAME"
+            exit 0
+         fi
+         setServiceName "$2"
+         destroy 
+         exit 0
+         ;;        
+   esac  
+}
+
+#------------------------------------------------------------------------------------
+
 # ███╗   ███╗ █████╗ ██╗███╗   ██╗
 # ████╗ ████║██╔══██╗██║████╗  ██║
 # ██╔████╔██║███████║██║██╔██╗ ██║
@@ -568,99 +694,29 @@ function main {
    # defines ROOTPATH,  DRSERVICESPATH,  SUPPORTIMAGE,  DRBINPATH, SUPPORTPATH
    initglobals
 
-   # check special commands with no SERVICENAME needed
    if [ "$#" -eq 0 ]; then 
       showusage
       showservices
       exit 0
-   elif [ "$1" = "clean" ]; then
-      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
-      exit 0
-   elif [ "$1" = "list" ]; then
-      showservices 
-      exit 0
-   elif [ "$1" = "update" ]; then
-      updatedr
-      exit 0
-   fi     
-
-   # all other commands have SERVICENAME as first argument.
-   SERVICENAME="$1"
-   readonly SERVICEPATH="${DRSERVICESPATH}/${SERVICENAME}"
-   readonly SERVICEBINPATH="${SERVICEPATH}/bin"
-   readonly SERVICEVARIABLESPATH="${SERVICEBINPATH}/_variables"
-
-   # dr SERVICE with no other params.
-   if [ "$#" -eq 1 ]; then
+   fi
+   
+   # Process (clean, list, update, install, restore, destroy)
+   # These ones don't require a valid service.
+   processdRunnerCommands "$@"
+   
+   # all other commands have SERVICENAME as second argument.
+   if [ "$#" -lt 2 ]; then
       showservicehelp
+      exit 0
    fi
 
-   # get the command to run and shift so $@ is the args.
-   USERCOMMAND="$2"
-   shift 2
+   # everything from now on is expected to be based on a valid service,
+   # so we should be able to read in the variables file.
+   setServiceName "$2"
+   readVariables
 
-   # HANDLE COMMANDS FOR A SERVICE THAT MIGHT BE BROKEN OR NOT EXIST YET. 
-   case "$USERCOMMAND" in
-      install)
-         if [ "$#" -eq 1 ]; then
-            IMAGENAME="$1"
-            install
-            echo " ">&2
-            showservicehelp
-            exit 0
-         else
-            dieusage "dr SERVICENAME install IMAGENAME"
-         fi
-         ;;
+   processServiceCommands "$@"
 
-      restore)
-         if [ "$#" -eq 1 ]; then
-            restore "$1"
-            exit 0
-         else
-            dieusage "[PASS=?] dr SERVICENAME restore BACKUPFILE"
-         fi
-         ;;
-
-      destroy)
-         destroy 
-         exit 0
-         ;;         
-
-      esac
-   
-   # -------------------------------------
-   
-   # If we've reached here then the service is expected to be okay.
-   # Read in _variables from the service.
-   if [ ! -d "$SERVICEPATH" ]; then showservices ; die "Service $SERVICENAME does not exist." ; fi
-   if [ ! -e "$SERVICEVARIABLESPATH" ]; then die "Service ${SERVICENAME} is corrupt (missing its _variables file)." ; fi
-   source "$SERVICEVARIABLESPATH"
-
-   # HANDLE COMMANDS FOR AN EXISTING SERVICE
-   case "$USERCOMMAND" in
-      update)
-         updateservice
-         ;;
-                  
-      backup)
-         if [ "$#" -eq 1 ]; then
-            backup "$1"
-         else
-            dieusage "[PASS=?] dr SERVICENAME backup BACKUPFILE"
-         fi
-         ;;
-
-      *)         
-         SCRIPTTORUN="${SERVICEBINPATH}/${USERCOMMAND}"
-         if [ -e "${SCRIPTTORUN}" ]; then
-            bash "${SCRIPTTORUN}" "$@"
-         else
-            showservicehelp
-         fi
-         ;;
-
-   esac     
 }
 
 #--------------------------------------------------------------------------
