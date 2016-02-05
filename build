@@ -1,5 +1,21 @@
 #!/bin/bash
 
-docker build -t drunner/support .
-#docker push j842/drunner-support
+IMAGENAME="drunner/support"
 
+
+#------------------------------------------------
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$BRANCH" = "master" ]; then
+  TAG=""
+else
+  TAG=":${BRANCH}"
+fi
+
+TARGET="${IMAGENAME}/support${TAG}"
+
+docker build -t "$TARGET" .
+
+echo " "
+echo "Built $TARGET"
