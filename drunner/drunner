@@ -12,7 +12,7 @@ set -o nounset
 #  manage docker containers in a simple and consistent way.
 #  
 #  See:
-#    https://github.com/j842/dr
+#    https://github.com/j842/drunner
 #
 # ------------------------------------------------------------------
 
@@ -131,7 +131,7 @@ SYNOPSIS
 DESCRIPTION
    Provides a standard way to manage and run containers supporting dr.
    Intended to be used both manually and via Ansible.
-   See https://github.com/j842/dr
+   See https://github.com/j842/drunner
    
 EXIT CODE
    0   - success
@@ -280,7 +280,7 @@ function recreateServiceBinPath {
    chown "${USERID}" "${SERVICEBINPATH}"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
-   docker run --rm -it -v "${SERVICEBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /dr/* /tempcopy/"                             
+   docker run --rm -it -v "${SERVICEBINPATH}:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"                             
    if [ $? -ne 0 ]; then 
       echo "Failed to copy files.">&2 
       echo "You will need to reinstall the service.">&2
