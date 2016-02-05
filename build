@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker build -t j842/dr-support .
-#docker push j842/dr-support
+docker build -t drunner/support .
+#docker push j842/drunner-support
 

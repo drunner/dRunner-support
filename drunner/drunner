@@ -23,11 +23,11 @@ else . "${MYDIR}/buildtime"
 fi
 
 # Other global constanst from dr-install in this file.
-readonly DR_CFG_FILE="/etc/dr/dr.cfg"
+readonly DR_CFG_FILE="/etc/drunner/dr.cfg"
 
 # Global constants.
 readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter")
-readonly COPYIMAGE="j842/dr-baseimage-alpine"
+readonly COPYIMAGE="drunner/baseimage-alpine"
 
 readonly BACKUP_MAIN="backup.tar.7z"
 readonly SERVICECFG="service.cfg"
@@ -370,16 +370,16 @@ function install {
 function updatedr {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
-   docker run -i -t --name="get-dr-install" -v "${TEMPDIR}:/tempdir" \
+   docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
                "${SUPPORTIMAGE}" get-dr-install "/tempdir"
    local RVAL="$?"
    docker rm "get-dr-install" >/dev/null 2>&1
 
-   if [ "$RVAL" -ne 0 ]; then die "Unable to get dr-install.">&2 ; fi
-   if [ ! -e "${TEMPDIR}/dr-install" ]; then die "dr-install mysteriously missing.">&2 ; fi
+   if [ "$RVAL" -ne 0 ]; then die "Unable to get drunner-install.">&2 ; fi
+   if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
    
    # run it to update the installation.
-   bash "${TEMPDIR}/dr-install" "${ROOTPATH}" "${PULLONUPDATE}"
+   bash "${TEMPDIR}/drunner-install" "${ROOTPATH}" "${PULLONUPDATE}"
    rm -r "${TEMPDIR}"
    exit 0
 }
