@@ -40,9 +40,9 @@ readonly ENDCODE="\e[0m"
 # die MESSAGE 
 function die {
    if [ -n "$1" ]; then
-      echo "$1" <&2
+      echo -e "$1" <&2
    else
-      echo "Unexpected error. Exiting."<&2
+      echo -e "Unexpected error. Exiting."<&2
    fi
    exit 1
 }
@@ -615,8 +615,7 @@ function processServiceCommands {
          if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
             showservicehelp
          elif elementIn "$3" "${REQDFILES[@]}"; then 
-            echo -e "$3 is a reserved word. Did you mean to use ${STARTCODE}drunner ${3} ${SERVICENAME}${ENDCODE}?">&2
-            exit 1
+            die "$3 is a reserved word. Try ${STARTCODE}drunner ${3} ${SERVICENAME}${ENDCODE} instead."
          else
             echo "3 = $3"
             echo "REQDFILES = ${REQDFILES[@]}"
