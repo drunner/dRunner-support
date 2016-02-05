@@ -301,7 +301,7 @@ function recreateServiceBinPath {
    
    if [ -v VOLUMES ]; then
       for i in "${!VOLUMES[@]}"; do
-         DOCKERVOLS[$((i))]="dr-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
+         DOCKERVOLS[$((i))]="drunner-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
          DOCKEROPTS[$((2*i))]="-v"
          DOCKEROPTS[$((2*i+1))]="${DOCKERVOLS[i]}:${VOLUMES[i]}"
       done
@@ -402,6 +402,8 @@ function updateservice {
          
    fi
    recreateServiceBinPath
+   
+   echo "Updated ${SERVICENAME} from ${IMAGENAME}.">&2
 }
 
 #------------------------------------------------------------------------------------
