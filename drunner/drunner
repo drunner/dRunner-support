@@ -373,7 +373,7 @@ function updatedr {
    docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
                "${SUPPORTIMAGE}" get-dr-install "/tempdir"
    local RVAL="$?"
-   docker rm "get-dr-install" >/dev/null 2>&1
+   docker rm "get-drunner-install" >/dev/null 2>&1
 
    if [ "$RVAL" -ne 0 ]; then die "Unable to get drunner-install.">&2 ; fi
    if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
