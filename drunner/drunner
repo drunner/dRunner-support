@@ -371,7 +371,7 @@ function updatedr {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
    docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
-               "${SUPPORTIMAGE}" get-dr-install "/tempdir"
+               "${SUPPORTIMAGE}" get-drunner-install "/tempdir"
    local RVAL="$?"
    docker rm "get-drunner-install" >/dev/null 2>&1
 
