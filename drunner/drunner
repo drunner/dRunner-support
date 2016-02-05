@@ -110,7 +110,7 @@ function showusage {
 cat <<EOF >&2
 
 NAME
-   dr - docker runner
+   drunner - docker Runner
 
 VERSION
    ${BUILDTIME}
