@@ -58,7 +58,7 @@ function install_createVolumes {
          else
             docker volume create --name="$DNAME" >/dev/null
             # set permissions on config volume
-            docker run --name="$DNAME" -v "${VOLNAME}:${VOLPATH}" "${COPYIMAGE}" \
+            docker run --name="$DNAME" -v "${VOLNAME}:${VOLPATH}" "drunner/baseimage-alpine" \
                /bin/bash -c "chown ${USERID}:root ${VOLPATH} && date >> ${VOLPATH}/install_date"
             docker rm "$DNAME" >/dev/null 
          fi

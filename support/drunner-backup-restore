@@ -95,12 +95,15 @@ function restore {
          done
       fi
       
-      # now can install base service. Updates DOCKERVOLS.
-      ( # install in subshell so it doesn't exit on us.
+      # now can install base service. 
+      ( # install in another subshell so it doesn't exit on us.
       installservice
       )
       RVAL="$?"
       if [ $RVAL -ne 0 ]; then echo "Fail on install - aborting.">&2 ; exit $RVAL ; fi
+      
+      # load DOCKERVOLS etc so we can restore the volumes.
+      loadService
          
       # restore volumes.
       # zip file names are based on the _old_ DOCKERVOLS, new volume name based on hte new ones.
