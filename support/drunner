@@ -38,8 +38,6 @@ if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." 
 
 #------------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------------
-
 # showservices
 function showservices {
    # list available services. 
@@ -94,41 +92,6 @@ EXIT CODE
    
 EOF
 }
-
-#------------------------------------------------------------------------------------
-
-# destroy
-# destroys everything we can about a service!
-function destroy {   
-   # call destroy in service.
-   if [ ! -v SERVICENAME ]; then 
-      die "Can't destroy because SERVICENAME is not set."
-   fi
-
-   if [ -v SERVICERUNNERPATH ] && [ -e "${SERVICERUNNERPATH}" ]; then 
-      bash "${SERVICERUNNERPATH}" destroy
-   fi
-   
-   # remove volume containers.
-   if [ -v DOCKERVOLS ]; then
-      for VOLNAME in "${DOCKERVOLS[@]}"; do      
-         docker volume rm "$VOLNAME" >/dev/null
-      done
-   fi
-   
-   # remove launch script
-   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
-      rm "/usr/local/bin/${SERVICENAME}"
-   fi
-   
-   # delete service directoy.
-   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
-      rm -r "${ROOTPATH}/services/${SERVICENAME}"
-   fi
-   
-   echo "Service $SERVICENAME has been destroyed."
-}
-
 
 #------------------------------------------------------------------------------------
 

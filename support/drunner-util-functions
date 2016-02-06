@@ -43,7 +43,7 @@ function volexists {
 function getUSERID {
    if [ -z "$1" ]; then die "getUSERID: requires IMAGENAME passed as first argument."; fi
    USERID=$(docker run --rm -it "${1}" /bin/bash -c "id -u | tr -d '\r\n'")
-   if [ $? -ne 0 ]; then die "getUSERID: Docker image ${1} does not exist."
+   if [ $? -ne 0 ]; then die "getUSERID: Docker image ${1} does not exist." ; fi
 }
 
 #------------------------------------------------------------------------------------
@@ -80,5 +80,40 @@ function validate-image  {
    
    echo "${IMAGENAME} is dr compatible.">&2
 }
+
+#------------------------------------------------------------------------------------
+
+# destroy
+# destroys everything we can about a service!
+function destroy {   
+   # call destroy in service.
+   if [ ! -v SERVICENAME ]; then 
+      die "Can't destroy because SERVICENAME is not set."
+   fi
+
+   if [ -v SERVICERUNNERPATH ] && [ -e "${SERVICERUNNERPATH}" ]; then 
+      bash "${SERVICERUNNERPATH}" destroy
+   fi
+   
+   # remove volume containers.
+   if [ -v DOCKERVOLS ]; then
+      for VOLNAME in "${DOCKERVOLS[@]}"; do      
+         docker volume rm "$VOLNAME" >/dev/null
+      done
+   fi
+   
+   # remove launch script
+   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
+      rm "/usr/local/bin/${SERVICENAME}"
+   fi
+   
+   # delete service directoy.
+   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
+      rm -r "${ROOTPATH}/services/${SERVICENAME}"
+   fi
+   
+   echo "Service $SERVICENAME has been destroyed."
+}
+
 
 #------------------------------------------------------------------------------------
