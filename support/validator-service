@@ -17,10 +17,13 @@ function die {
    echo -e " ">&2
    echo -e "\e[31m\e[1mService broken. ${1}\e[0m">&2
    echo -e " ">&2
-   echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
-   echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
-   echo -e "should be preserved if you're coming from a stable release.">&2
-   echo -e " ">&2
+   
+   if [ -z $NUKEOK ]; then
+      echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
+      echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
+      echo -e "should be preserved if you're coming from a stable release.">&2
+      echo -e " ">&2
+   fi
    exit 1
 }
 
@@ -32,6 +35,7 @@ source "/etc/drunner/drunner.cfg"
 
 # Validate service is installed okay
 SERVICENAME=${1:-""}
+NUKEOK=${2:-""}
 
 if [ -z "SERVICENAME" ]; then 
    echo -e "Usage: ${CODE_S}validator-service SERVICENAME${CODE_E}">&2

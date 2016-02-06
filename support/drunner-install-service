@@ -3,10 +3,11 @@
 
 #------------------------------------------------------------------------------------
 
-# loadService
+# loadService [NUKEOK]
 function loadService {
+   NUKEOK=${1:-""}   
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "loadService - SERVICENAME not defined." ; fi
-   bash "${ROOTPATH}/support/validator-service" "$SERVICENAME"
+   bash "${ROOTPATH}/support/validator-service" "$SERVICENAME" "$NUKEOK"
    if [ $? -ne 0 ]; then exit 1 ; fi
 
    source "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg"
@@ -64,6 +65,7 @@ function install_createVolumes {
 # recreateservice
 # called by both install and SERVICE update.
 function recreateservice {   
+   NUKEOK=${1:-""}
    # the directory that the container will update.
    if [ ! -v SERVICENAME ]; then die "SERVICENAME undefined." ; fi
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then rm -r "${ROOTPATH}/services/${SERVICENAME}" ; fi
@@ -89,7 +91,7 @@ function recreateservice {
    chmod -R a-w "${ROOTPATH}/services/${SERVICENAME}/drunner"
    
    # create _variables file for the service to read.
-   loadService
+   loadService "NUKEOK"
    
    STR_DOCKERVOLS=""
    STR_DOCKEROPTS=""
@@ -150,24 +152,25 @@ function installservice {
    if [ -z "$SERVICENAME" ]; then die "install requires SERVICENAME." ; fi
 
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
-      echo "${SERVICENAME} is already installed at ${ROOTPATH}/services/${SERVICENAME}. Initialisation cancelled.">&2
-      echo "Try ${CODE_S}drunner ${SERVICENAME} update${CODE_E} instead.">&2
+      echo -e "${SERVICENAME} is already installed at ${ROOTPATH}/services/${SERVICENAME}. Initialisation cancelled.">&2
+      echo -e "Try ${CODE_S}drunner ${SERVICENAME} update${CODE_E} instead.">&2
       exit 1
    fi
+
+   (      
+      set -e
       
-   validate-image 
-   recreateservice
-   install_createlaunchscript
-   install_createVolumes
-      
-   # Finally run the install script in the service.         
-   bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" install
-   
-   # validate the installed service.
-   bash "${ROOTPATH}/support/validator-service" "${SERVICENAME}"
+      validate-image 
+      recreateservice "NUKEOK"
+      install_createlaunchscript
+      install_createVolumes
+         
+      # Finally run the install script in the service.         
+      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" install
+   )
    if [ $? -ne 0 ]; then
       destroy
-      die "Installation failed. System returned to clean state."
+      die "Installation failed. ${CODE_E} System returned to clean state."
    fi
     
    # TODO: If we had errors then destroy everything!

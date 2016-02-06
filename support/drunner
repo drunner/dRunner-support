@@ -50,6 +50,7 @@ function showservices {
          printf "   %-15s - %-55s\n" "${SPATH##*/}" "Broken service"
       fi
    done
+   echo " "
 }
 
 #------------------------------------------------------------------------------------
@@ -122,16 +123,16 @@ function updatedr {
 #------------------------------------------------------------------------------------
 
 function showservicehelp {
-   local HELPSCRIPT="${SERVICERUNNERPATH}"
+   if [ -z $SERVICENAME ]; then die "Can't show service help when we don't know what service it is."; fi
+   local SERVICERUNNER="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
 
-   if [ -e "${SERVICEVARIABLESPATH}" ] && [ -e "$HELPSCRIPT" ]; then
-      source "$SERVICEVARIABLESPATH"
-      bash "${HELPSCRIPT}" help
+   if [ -e "$SERVICERUNNER" ]; then
+      bash "${SERVICERUNNER}" help
       exit 0
    else
       showservices
       echo " ">&2
-      die "Service ${SERVICENAME} does not exist."
+      die "Service ${SERVICENAME} is broken or does not exist."
    fi
 }
 
@@ -275,7 +276,7 @@ function main {
    
    # all other commands have SERVICENAME as second argument.
    if [ "$#" -lt 2 ]; then
-      showservicehelp
+      showusage
       exit 0
    fi
 
