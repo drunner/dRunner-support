@@ -1,12 +1,19 @@
 #!/bin/bash
 
-# get-dr-install PATH
+# get-drunner-install PATH URL
+
+
+
+if [ "$#" -ne 2 ]; then 
+   echo "get-dr-install: wrong number of args.">&2
+   exit 1
+fi
 
 TARGETDIR="$1"
-DOWNLOADURL="https://raw.github.com/j842/dockerrunner/master/drunner-install"
+DOWNLOADURL="$2"
 
 if [ ! -d "${TARGETDIR}" ]; then
-   echo "Directory ${TARGETDIR} does not exist.">&2
+   echo "get-dr-install: Directory ${TARGETDIR} does not exist.">&2
    exit 1
 fi
 
@@ -15,7 +22,7 @@ TARGET="${TARGETDIR}/drunner-install"
 if [ -e "${TARGET}" ]; then
    rm "${TARGET}"
    if [ $? -ne 0 ]; then
-      echo "${TARGET} already exists and couldn't be removed.">&2
+      echo "get-dr-install: ${TARGET} already exists and couldn't be removed.">&2
       exit 1
    fi
 fi
@@ -23,7 +30,7 @@ fi
 wget --no-cache -nv -O "${TARGET}" "${DOWNLOADURL}"
 
 if [ ! -e "${TARGET}" ]; then 
-   echo "Download failed!">&2
+   echo "get-dr-install: Download failed!">&2
    exit 1
 fi
 

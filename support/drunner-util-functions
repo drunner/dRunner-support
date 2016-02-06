@@ -149,7 +149,7 @@ function destroy {
    if [ -v DOCKERVOLS ]; then
       for VOLNAME in "${DOCKERVOLS[@]}"; do      
          docker volume rm "$VOLNAME" >/dev/null
-         echo "Destroyed volumne ${VOLNAME}."
+         echo "Destroyed docker volume ${VOLNAME}."
       done
    fi
    

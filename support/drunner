@@ -101,7 +101,7 @@ function updatedr {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
    docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
-               "${SUPPORTIMAGE}" get-drunner-install "/tempdir"
+               "${SUPPORTIMAGE}" get-drunner-install "/tempdir" "$DRUNNERINSTALLURL"
    local RVAL="$?"
    docker rm "get-drunner-install" >/dev/null 2>&1
 
@@ -109,7 +109,7 @@ function updatedr {
    if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
    
    # run it to update the installation.
-   bash "${TEMPDIR}/drunner-install" "${ROOTPATH}" "${PULLONUPDATE}" "${SUPPORTIMAGE}"
+   bash "${TEMPDIR}/drunner-install"
    rm -r "${TEMPDIR}"
    
    # not safe to continue.
