@@ -35,10 +35,13 @@ source "/etc/drunner/drunner.cfg"
 if [ ! -v ROOTPATH ]; then die "drunner.cfg doesn't set ROOTPATH."; fi
 if [ ! -v PULLONUPDATE ]; then die "drunner.cfg doesn't set PULLONUPDATE."; fi
 if [ ! -v SUPPORTIMAGE ]; then die "drunner.cfg doesn't set SUPPORTIMAGE."; fi
+if [ ! -v DRUNNERINSTALLURL ]; then die "drunner.cfg doesn't set DRUNNERINSTALLURL."; fi
+if [ ! -v DRUNNERINSTALLTIME ]; then die "drunner.cfg doesn't set DRUNNERINSTALLTIME."; fi
+
 if [ ! -d "$ROOTPATH" ]; then die "$ROOTPATH doesn't exist."; fi
 
 if [ ! -e "${ROOTPATH}/support/buildtime" ]; then die "${ROOTPATH}/support/buildtime is missing." ; fi
 source "${ROOTPATH}/support/buildtime"
-if [ ! -v BUILDTIME ]; then die "buildtime doesn't set BUILDTIME." ; fi
+if [ ! -v SUPPORTBUILDTIME ]; then die "buildtime doesn't set SUPPORTBUILDTIME." ; fi
 
 exit 0
