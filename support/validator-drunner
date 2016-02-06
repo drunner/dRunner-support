@@ -1,0 +1,44 @@
+#!/bin/bash
+set -o nounset
+set -e
+
+# ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗ 
+# ██║   ██║██╔══██╗██║     ██║██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗
+# ██║   ██║███████║██║     ██║██║  ██║███████║   ██║   ██║   ██║██████╔╝
+# ╚██╗ ██╔╝██╔══██║██║     ██║██║  ██║██╔══██║   ██║   ██║   ██║██╔══██╗
+#  ╚████╔╝ ██║  ██║███████╗██║██████╔╝██║  ██║   ██║   ╚██████╔╝██║  ██║
+#   ╚═══╝  ╚═╝  ╚═╝╚══════╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+ 
+ 
+# check that drunner itself is installed okay.
+ 
+                                                                      
+readonly CODE_S="\e[32m"
+readonly CODE_E="\e[0m"
+
+# die MESSAGE 
+function die {
+   echo -e " ">&2
+   echo -e "\e[31m\e[1mInstallation broken. ${1}\e[0m">&2
+   echo -e " ">&2
+   echo -e "Download the latest drunner-install and run it.">&2
+   echo -e "Your services and data will be preserved.">&2
+   echo -e " ">&2
+   echo -e "${CODE_S}https://raw.github.com/j842/dockerrunner/master/drunner-install${CODE_E}">&2
+   echo -e " ">&2
+   exit 1
+}
+
+# Validate drunner is installed okay
+if [ ! -e "/etc/drunner/drunner.cfg" ]; then die "/etc/drunner/drunner.cfg missing." ; fi
+source "/etc/drunner/drunner.cfg"
+if [ ! -v ROOTPATH ]; then die "drunner.cfg doesn't set ROOTPATH."; fi
+if [ ! -v PULLONUPDATE ]; then die "drunner.cfg doesn't set PULLONUPDATE."; fi
+if [ ! -v SUPPORTIMAGE ]; then die "drunner.cfg doesn't set SUPPORTIMAGE."; fi
+if [ ! -d "$ROOTPATH" ]; then die "$ROOTPATH doesn't exist."; fi
+
+if [ ! -e "${ROOTPATH}/support/buildtime" ]; then die "${ROOTPATH}/support/buildtime is missing." ; fi
+source "${ROOTPATH}/support/buildtime"
+if [ ! -v BUILDTIME ]; then die "buildtime doesn't set BUILDTIME." ; fi
+
+exit 0

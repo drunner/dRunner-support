@@ -1,0 +1,62 @@
+#!/bin/bash
+set -o nounset
+set -e
+
+# ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗ 
+# ██║   ██║██╔══██╗██║     ██║██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗
+# ██║   ██║███████║██║     ██║██║  ██║███████║   ██║   ██║   ██║██████╔╝
+# ╚██╗ ██╔╝██╔══██║██║     ██║██║  ██║██╔══██║   ██║   ██║   ██║██╔══██╗
+#  ╚████╔╝ ██║  ██║███████╗██║██████╔╝██║  ██║   ██║   ╚██████╔╝██║  ██║
+#   ╚═══╝  ╚═╝  ╚═╝╚══════╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+                                                                      
+readonly CODE_S="\e[32m"
+readonly CODE_E="\e[0m"
+
+# die MESSAGE 
+function die {
+   echo -e " ">&2
+   echo -e "\e[31m\e[1mService broken. ${1}\e[0m">&2
+   echo -e " ">&2
+   echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
+   echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
+   echo -e "should be preserved if you're coming from a stable release.">&2
+   echo -e " ">&2
+   exit 1
+}
+
+
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+if ! "${MYDIR}/drunner-validator" ; then exit 1 ; fi
+
+source "/etc/drunner/drunner.cfg"
+
+# Validate service is installed okay
+if [ ! -v 1 ] || [ -z "$1" ]; then 
+   echo "usage: ${CODE_S}validator-service SERVICENAME${CODE_E}">&2
+fi
+SERVICENAME="$1"
+
+if [ ! -d "${ROOTPATH}/services/${SERVICENAME}/drunner" ]; then 
+   die "The service is not installed."
+fi
+
+# Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
+readonly REQDFILES=("drunner/servicerunner")
+for CFILE in "${REQDFILES[@]}"; do
+   if [ ! -e "${ROOTPATH}/services/${SERVICENAME}/$CFILE" ]; then
+      die "Required file not present: $CFILE"
+   fi
+done
+
+readonly SOURCEFILES=("_imagename" "drunner/service.cfg" "drunner/_variables" "drunner/buildtime")
+for CFILE in "${SOURCEFILES[@]}"; do
+   if [ ! -e "${ROOTPATH}/services/${SERVICENAME}/$CFILE" ]; then
+      die "Required file not present: $CFILE"
+   fi
+   source "${ROOTPATH}/services/${SERVICENAME}/$CFILE"
+   if [ $? -ne 0 ]; then die "Couldn't source ${ROOTPATH}/services/${SERVICENAME}/$CFILE"; fi
+done
+
+if [ ! -v IMAGENAME ]; then die "IMAGENAME wasn't set by _imagename."; fi
+
+exit 0

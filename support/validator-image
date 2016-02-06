@@ -24,7 +24,7 @@ if [ "$UID" -eq 0 ]; then
 fi
 
 # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?
-readonly REQDFILES=("install" "destroy" "backup" "restore" "help" "enter" "update" "service.cfg")
+readonly REQDFILES=("service.cfg" "servicerunner")
 for CFILE in "${REQDFILES[@]}"; do
    if [ ! -e "/drunner/$CFILE" ]; then
       die "required file not present: /drunner/$CFILE"

@@ -1,0 +1,328 @@
+#!/bin/bash
+set -o nounset
+
+#          88  88888888ba                                                                  
+#          88  88      "8b                                                                 
+#          88  88      ,8P                                                                 
+#  ,adPPYb,88  88aaaaaa8P'  88       88  8b,dPPYba,   8b,dPPYba,    ,adPPYba,  8b,dPPYba,  
+# a8"    `Y88  88""""88'    88       88  88P'   `"8a  88P'   `"8a  a8P_____88  88P'   "Y8  
+# 8b       88  88    `8b    88       88  88       88  88       88  8PP"""""""  88          
+# "8a,   ,d88  88     `8b   "8a,   ,a88  88       88  88       88  "8b,   ,aa  88          
+#  `"8bbdP"Y8  88      `8b   `"YbbdP'Y8  88       88  88       88   `"Ybbd8"'  88          
+#                                                                                                                                                                           
+#                                                                                                          
+#  manage docker containers in a simple and consistent way.
+#  
+#  See:
+#    https://github.com/j842/drunner
+#
+# ------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------------
+
+# Initialisation.
+
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+if ! "${MYDIR}/drunner-validator" ; then exit 1 ; fi
+
+source "/etc/drunner/drunner.cfg"
+source "${ROOTPATH}/support/buildtime"
+source "${ROOTPATH}/support/drunner-util-functions"
+source "${ROOTPATH}/support/drunner-install-service"
+source "${ROOTPATH}/support/drunner-backup-restore"
+
+if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
+if ! command_exists docker ; then die "Requires docker to be installed." ; fi
+if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
+
+#------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------------
+
+# showservices
+function showservices {
+   # list available services. 
+   echo "AVAILABLE SERVICES"
+   find "$ROOTPATH/services" -maxdepth 1 -mindepth 1 -type d | while read SPATH; do 
+      if [ -e "${SPATH}/${IMAGENAMECFG}" ]; then
+         source "${SPATH}/${IMAGENAMECFG}"
+         printf "   %-15s - %-55s\n" "${SPATH##*/}" "$IMAGENAME"
+      else
+         printf "   %-15s - %-55s\n" "${SPATH##*/}" "Broken service"
+      fi
+   done
+}
+
+#------------------------------------------------------------------------------------
+
+# showusage
+function showusage {
+cat <<EOF >&2
+
+NAME
+   drunner - docker Runner
+
+VERSION
+   ${BUILDTIME}
+   
+SYNOPSIS
+   drunner clean
+   drunner list
+   drunner update
+   
+   [PASS=?] drunner backup  SERVICENAME BACKUPFILE
+   [PASS=?] drunner restore BACKUPFILE  SERVICENAME  
+   
+   drunner install IMAGENAME [SERVICENAME]
+   drunner update  SERVICENAME
+   drunner destroy SERVICENAME
+   drunner enter   SERVICENAME [ARGS]
+   
+   SERVICENAME
+   SERVICENAME COMMAND ARGS
+   
+DESCRIPTION
+   Provides a standard way to manage and run containers supporting dr.
+   Intended to be used both manually and via Ansible.
+   See https://github.com/j842/drunner
+   
+EXIT CODE
+   0   - success
+   1   - error
+   3   - no changes made
+   
+EOF
+}
+
+#------------------------------------------------------------------------------------
+
+# destroy
+# destroys everything we can about a service!
+function destroy {   
+   # call destroy in service.
+   if [ ! -v SERVICENAME ]; then 
+      die "Can't destroy because SERVICENAME is not set."
+   fi
+
+   if [ -v SERVICERUNNERPATH ] && [ -e "${SERVICERUNNERPATH}" ]; then 
+      bash "${SERVICERUNNERPATH}" destroy
+   fi
+   
+   # remove volume containers.
+   if [ -v DOCKERVOLS ]; then
+      for VOLNAME in "${DOCKERVOLS[@]}"; do      
+         docker volume rm "$VOLNAME" >/dev/null
+      done
+   fi
+   
+   # remove launch script
+   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
+      rm "/usr/local/bin/${SERVICENAME}"
+   fi
+   
+   # delete service directoy.
+   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
+      rm -r "${ROOTPATH}/services/${SERVICENAME}"
+   fi
+   
+   echo "Service $SERVICENAME has been destroyed."
+}
+
+
+#------------------------------------------------------------------------------------
+
+# updatedr - udpates docker runner.
+function updatedr {
+   # use the container to get the latest dr-install script.
+   local TEMPDIR="$(mktemp -d)"
+   docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
+               "${SUPPORTIMAGE}" get-drunner-install "/tempdir"
+   local RVAL="$?"
+   docker rm "get-drunner-install" >/dev/null 2>&1
+
+   if [ "$RVAL" -ne 0 ]; then die "Unable to get drunner-install.">&2 ; fi
+   if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
+   
+   # run it to update the installation.
+   bash "${TEMPDIR}/drunner-install" "${ROOTPATH}" "${PULLONUPDATE}" "${SUPPORTIMAGE}"
+   rm -r "${TEMPDIR}"
+   
+   # not safe to continue.
+   exit 0
+}
+
+
+#------------------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------------
+
+function showservicehelp {
+   local HELPSCRIPT="${SERVICERUNNERPATH}"
+
+   if [ -e "${SERVICEVARIABLESPATH}" ] && [ -e "$HELPSCRIPT" ]; then
+      source "$SERVICEVARIABLESPATH"
+      bash "${HELPSCRIPT}" help
+      exit 0
+   else
+      showservices
+      echo " ">&2
+      die "Service ${SERVICENAME} does not exist."
+   fi
+}
+
+#------------------------------------------------------------------------------------
+
+
+
+# processServiceCommands ARGS
+function processServiceCommands {
+   case "$1" in
+      update)
+         updateservice
+         ;;
+                  
+      backup)
+         if [ "$#" -eq 3 ]; then
+            backup "$3"
+         else
+            dieusage "[PASS=?] drunner backup SERVICENAME BACKUPFILE"
+         fi
+         ;;
+         
+      enter)
+         if [ "$#" -lt 2 ]; then
+            showservicehelp
+         else
+            SCRIPTTORUN="${SERVICEBINPATH}/enter"
+            shift 2
+            bash "${SCRIPTTORUN}" "$@"
+         fi
+         ;;
+         
+      # servicecmd SERVICENAME COMMAND
+      servicecmd)
+         if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
+            showservicehelp
+         elif elementIn "$3" "${REQDFILES[@]}"; then 
+            die "$3 is a reserved word. Try ${CODE_S}drunner ${3} ${SERVICENAME}${CODE_E} instead."
+         else
+            SCRIPTTORUN="${SERVICEBINPATH}/${3}"
+            shift 3
+            if [ -e "${SCRIPTTORUN}" ]; then
+               bash "${SCRIPTTORUN}" "$@"
+            else
+               showservicehelp
+            fi
+         fi
+         ;;
+
+      *)
+         showservicehelp
+   esac     
+}
+
+
+#------------------------------------------------------------------------------------
+
+# processdRunnerCommands ARGS
+function processdRunnerCommands {
+   
+   # start with high level commands (clean, list, update), and commands on a service
+   # that do not expect the service to be fully configured (install, restore, destroy)
+   case "$1" in 
+      clean)
+         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
+         exit 0
+         ;;
+         
+      list)
+         showservices
+         exit 0
+         ;;
+         
+      update)
+         # if no args then update dr itself.
+         if [ "$#" -eq 1 ]; then
+            updatedr
+            exit 0
+         fi
+         # otherwise fall through - we want to update a service not dr.
+         ;;
+         
+      install)
+         if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+            dieusage "drunner install IMAGENAME [SERVICENAME]"
+         fi
+
+         IMAGENAME="$2"
+         if [ "$#" -eq 3 ]; then 
+            SERVICENAME="$3" 
+         else
+            SERVICENAME="${IMAGENAME##*/}"
+         fi
+
+         installservice
+         exit 0
+         ;;
+
+      restore)
+         if [ "$#" -ne 3 ]; then
+            dieusage "[PASS=?] drunner restore BACKUPFILE  SERVICENAME  "
+            exit 0
+         fi
+         setServiceName "$3"         
+         restore "$2"
+         exit 0
+         ;;
+
+      destroy)
+         if [ "$#" -ne 2 ]; then
+            dieusage "[PASS=?] drunner destroy SERVICENAME"
+            exit 0
+         fi
+         setServiceName "$2"
+         destroy 
+         exit 0
+         ;;        
+   esac  
+}
+
+#------------------------------------------------------------------------------------
+
+# ███╗   ███╗ █████╗ ██╗███╗   ██╗
+# ████╗ ████║██╔══██╗██║████╗  ██║
+# ██╔████╔██║███████║██║██╔██╗ ██║
+# ██║╚██╔╝██║██╔══██║██║██║╚██╗██║
+# ██║ ╚═╝ ██║██║  ██║██║██║ ╚████║
+# ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+
+function main {                                
+
+   if [ "$#" -eq 0 ]; then 
+      showusage
+      showservices
+      exit 0
+   fi
+   
+   # Process (clean, list, update, install, restore, destroy)
+   # These ones don't require a valid service.
+   processdRunnerCommands "$@"
+   
+   # all other commands have SERVICENAME as second argument.
+   if [ "$#" -lt 2 ]; then
+      showservicehelp
+      exit 0
+   fi
+
+   # everything from now on is expected to be based on a valid service,
+   # so we should be able to read in the variables file.
+   SERVICENAME="$2"
+   loadService
+
+   processServiceCommands "$@"
+}
+
+#--------------------------------------------------------------------------
+main "$@"
