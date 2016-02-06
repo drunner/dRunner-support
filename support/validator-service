@@ -58,7 +58,7 @@ for CFILE in "${REQDFILES[@]}"; do
    fi
 done
 
-readonly SOURCEFILES=("_imagename" "drunner/service.cfg" "drunner/_variables" "drunner/buildtime")
+readonly SOURCEFILES=("_imagename" "drunner/service.cfg" "drunner/_variables")
 for CFILE in "${SOURCEFILES[@]}"; do
    if [ ! -e "${ROOTPATH}/services/${SERVICENAME}/$CFILE" ]; then
       die "Required file not present: $CFILE"

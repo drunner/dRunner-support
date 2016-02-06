@@ -138,10 +138,17 @@ function showservicehelp {
 
 #------------------------------------------------------------------------------------
 
-
-
-# processServiceCommands ARGS
+# processServiceCommands COMMAND SERVICENAME [ARGS..]
 function processServiceCommands {
+   # all these commands have SERVICENAME as second argument.
+   if [ "$#" -lt 2 ]; then
+      showusage
+      exit 0
+   fi
+
+   SERVICENAME="$2"
+   loadService
+      
    case "$1" in
       update)
          updateservice
@@ -156,26 +163,25 @@ function processServiceCommands {
          ;;
          
       enter)
-         if [ "$#" -lt 2 ]; then
-            showservicehelp
-         else
-            SCRIPTTORUN="${SERVICEBINPATH}/enter"
-            shift 2
-            bash "${SCRIPTTORUN}" "$@"
-         fi
+         SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
+         shift 2 
+         bash "${SCRIPTTORUN}" "enter" "$@"
          ;;
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
+         local RESERVEDWORDS=("install" "backup" "restore" "destroy" "update" "enter")
          if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
             showservicehelp
-         elif elementIn "$3" "${REQDFILES[@]}"; then 
-            die "$3 is a reserved word. Try ${CODE_S}drunner ${3} ${SERVICENAME}${CODE_E} instead."
+         elif elementIn "$3" "${RESERVEDWORDS[@]}"; then 
+            echo -e "$3 is a reserved word. Try ${CODE_S}drunner ${3} ${SERVICENAME}${CODE_E} instead.">&2
+            exit 1
          else
-            SCRIPTTORUN="${SERVICEBINPATH}/${3}"
+            SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
+            SUBCOMMAND="$3"
             shift 3
             if [ -e "${SCRIPTTORUN}" ]; then
-               bash "${SCRIPTTORUN}" "$@"
+               bash "${SCRIPTTORUN}" "$SUBCOMMAND" "$@"
             else
                showservicehelp
             fi
@@ -192,7 +198,6 @@ function processServiceCommands {
 
 # processdRunnerCommands ARGS
 function processdRunnerCommands {
-   
    # start with high level commands (clean, list, update), and commands on a service
    # that do not expect the service to be fully configured (install, restore, destroy)
    case "$1" in 
@@ -274,17 +279,7 @@ function main {
    # These ones don't require a valid service.
    processdRunnerCommands "$@"
    
-   # all other commands have SERVICENAME as second argument.
-   if [ "$#" -lt 2 ]; then
-      showusage
-      exit 0
-   fi
-
-   # everything from now on is expected to be based on a valid service,
-   # so we should be able to read in the variables file.
-   SERVICENAME="$2"
-   loadService
-
+   # everything from now on is expected to be based on a valid service
    processServiceCommands "$@"
 }
 
