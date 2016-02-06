@@ -3,34 +3,6 @@
 
 #------------------------------------------------------------------------------------
 
-# loadService [SKIPVALIDATION]
-function loadService {
-   SKIPVALIDATION=${1:-""}   
-   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "loadService - SERVICENAME not defined." ; fi
-   if [ -z $SKIPVALIDATION ]; then 
-      bash "${ROOTPATH}/support/validator-service" "$SERVICENAME"
-      if [ $? -ne 0 ]; then exit 1 ; fi
-   fi
-   
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg"
-   fi
-   
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/_imagename" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/_imagename"
-   fi
-   
-   if [ -v VOLUMES ]; then
-      for i in "${!VOLUMES[@]}"; do
-         DOCKERVOLS[$((i))]="drunner-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
-         DOCKEROPTS[$((2*i))]="-v"
-         DOCKEROPTS[$((2*i+1))]="${DOCKERVOLS[i]}:${VOLUMES[i]}"
-      done
-   fi
-}
-
-#------------------------------------------------------------------------------------
-
 # install_createlaunchscript
 function install_createlaunchscript {
    local SCRIPTPATH="/usr/local/bin/${SERVICENAME}"

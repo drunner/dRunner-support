@@ -82,24 +82,74 @@ function validate-image  {
    echo "${IMAGENAME} is dr compatible.">&2
 }
 
+
+#------------------------------------------------------------------------------------
+# array2string "${arr[@]:-}" ; echo "$ARRAYSTR"
+# the string is intended for outputting to a file - e.g. MYVAR="$ARRAYSTR", which can
+# be read back in with source. Works with empty arrays, and empty strings in the array.
+
+function array2string {
+   ARRAYSTR=""
+   if [ -n "$1" ]; then
+      printf -v ARRAYSTR "\"%s\" " "$@"
+   fi
+   ARRAYSTR="(${ARRAYSTR% })"
+}
+
+
+#------------------------------------------------------------------------------------
+
+# loadService [SKIPVALIDATION]
+# if validation is skipped then it requires SERVICENAME and ROOTPATH, but copes with
+# anything else.
+function loadService {
+   SKIPVALIDATION=${1:-""}   
+   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "loadService - SERVICENAME not defined." ; fi
+   if [ -z $SKIPVALIDATION ]; then 
+      bash "${ROOTPATH}/support/validator-service" "$SERVICENAME"
+      if [ $? -ne 0 ]; then exit 1 ; fi
+   fi
+   
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg" ]; then
+      source "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg"
+   fi
+   
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/_imagename" ]; then
+      source "${ROOTPATH}/services/${SERVICENAME}/_imagename"
+   fi
+   
+   if [ -v VOLUMES ]; then
+      for i in "${!VOLUMES[@]}"; do
+         DOCKERVOLS[$((i))]="drunner-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
+         DOCKEROPTS[$((2*i))]="-v"
+         DOCKEROPTS[$((2*i+1))]="${DOCKERVOLS[i]}:${VOLUMES[i]}"
+      done
+   fi
+}
+
 #------------------------------------------------------------------------------------
 
 # destroy
 # destroys everything we can about a service!
+# requires both SERVICENAME and ROOTPATH to be set. Assumes nothing else.
 function destroy {   
    # call destroy in service.
    if [ ! -v SERVICENAME ]; then 
       die "Can't destroy because SERVICENAME is not set."
    fi
 
-   if [ -v SERVICERUNNERPATH ] && [ -e "${SERVICERUNNERPATH}" ]; then 
-      bash "${SERVICERUNNERPATH}" destroy
+   # attempt to read the service info, if present.
+   loadService "SKIPVALIDATION"
+
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy
    fi
    
    # remove volume containers.
    if [ -v DOCKERVOLS ]; then
       for VOLNAME in "${DOCKERVOLS[@]}"; do      
          docker volume rm "$VOLNAME" >/dev/null
+         echo "Destroyed volumne ${VOLNAME}."
       done
    fi
    
@@ -116,19 +166,6 @@ function destroy {
    echo "Service $SERVICENAME has been destroyed."
 }
 
-
-#------------------------------------------------------------------------------------
-# array2string "${arr[@]:-}" ; echo "$ARRAYSTR"
-# the string is intended for outputting to a file - e.g. MYVAR="$ARRAYSTR", which can
-# be read back in with source. Works with empty arrays, and empty strings in the array.
-
-function array2string {
-   ARRAYSTR=""
-   if [ -n "$1" ]; then
-      printf -v ARRAYSTR "\"%s\" " "$@"
-   fi
-   ARRAYSTR="(${ARRAYSTR% })"
-}
 
 
 #------------------------------------------------------------------------------------
