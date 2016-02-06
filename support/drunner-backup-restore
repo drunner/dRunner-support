@@ -96,7 +96,11 @@ function restore {
       fi
       
       # now can install base service. Updates DOCKERVOLS.
-      install
+      ( # install in subshell so it doesn't exit on us.
+      installservice
+      )
+      RVAL="$?"
+      if [ $RVAL -ne 0 ]; then echo "Fail on install - aborting.">&2 ; exit $RVAL ; fi
          
       # restore volumes.
       # zip file names are based on the _old_ DOCKERVOLS, new volume name based on hte new ones.
@@ -120,6 +124,7 @@ function restore {
    rm -r "${TEMPROOT}"  
    if [ $RVAL -ne 0 ]; then 
       if [ -e "${ROOTPATH}/services/${SERVICENAME}" ]; then 
+         echo "destroy"
          destroy 
       fi
       die "Restore failed. Temp files have been removed, system back in clean state."
