@@ -9,11 +9,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # add in the assets.
-COPY ["./drunner","/drunner"]
+COPY ["./support","/support"]
 COPY ["./usrlocalbin","/usr/local/bin/"]
-RUN echo "BUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /drunner/buildtime && \
+RUN echo "BUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /support/buildtime && \
       chmod a+rx -R /usr/local/bin  &&  \
-      chmod a-w -R /drunner
+      chmod a-w -R /support
 
 # expose volume
 VOLUME ["/config"]
