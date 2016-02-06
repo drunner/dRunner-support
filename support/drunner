@@ -24,7 +24,7 @@ set -o nounset
 # Initialisation.
 
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
-if ! "${MYDIR}/drunner-validator" ; then exit 1 ; fi
+if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
 
 source "/etc/drunner/drunner.cfg"
 source "${ROOTPATH}/support/buildtime"
@@ -43,8 +43,8 @@ function showservices {
    # list available services. 
    echo "AVAILABLE SERVICES"
    find "$ROOTPATH/services" -maxdepth 1 -mindepth 1 -type d | while read SPATH; do 
-      if [ -e "${SPATH}/${IMAGENAMECFG}" ]; then
-         source "${SPATH}/${IMAGENAMECFG}"
+      if [ -e "${SPATH}/_imagename" ]; then
+         source "${SPATH}/_imagename"
          printf "   %-15s - %-55s\n" "${SPATH##*/}" "$IMAGENAME"
       else
          printf "   %-15s - %-55s\n" "${SPATH##*/}" "Broken service"

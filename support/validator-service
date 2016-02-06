@@ -26,18 +26,24 @@ function die {
 
 
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
-if ! "${MYDIR}/drunner-validator" ; then exit 1 ; fi
+if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
 
 source "/etc/drunner/drunner.cfg"
 
 # Validate service is installed okay
-if [ ! -v 1 ] || [ -z "$1" ]; then 
-   echo "usage: ${CODE_S}validator-service SERVICENAME${CODE_E}">&2
-fi
-SERVICENAME="$1"
+SERVICENAME=${1:-""}
 
+if [ -z "SERVICENAME" ]; then 
+   echo -e "Usage: ${CODE_S}validator-service SERVICENAME${CODE_E}">&2
+   echo -e "SERVICENAME=$1"
+   exit 1
+fi
+
+if [ ! -d "${ROOTPATH}/services/${SERVICENAME}" ]; then 
+   die "The service is not installed in ${ROOTPATH}/services/${SERVICENAME}."
+fi
 if [ ! -d "${ROOTPATH}/services/${SERVICENAME}/drunner" ]; then 
-   die "The service is not installed."
+   die "The service's scripts are not installed correctly."
 fi
 
 # Check mandatory files in image (global var IMAGENAME) before touching host. Is it a valid dr container?

@@ -5,8 +5,8 @@
 
 # loadService
 function loadService {
-   if [ ! -v SERVICENAME ]; then die "loadService - SERVICENAME not defined." ; fi
-   "${ROOTPATH}/support/validator-service" "$SERVICENAME"
+   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "loadService - SERVICENAME not defined." ; fi
+   bash "${ROOTPATH}/support/validator-service" "$SERVICENAME"
    if [ $? -ne 0 ]; then exit 1 ; fi
 
    source "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg"
