@@ -49,8 +49,8 @@ EOF
       fi
       
       # Compress everything with password
-      "${ROOTPATH}/support/compress" "$TEMPPARENT" "$TEMPROOT" "${BACKUP_MAIN}"
-      mv "${TEMPROOT}/${BACKUP_MAIN}" "$BACKUPFILE"
+      "${ROOTPATH}/support/compress" "$TEMPPARENT" "$TEMPROOT" backupmain.tar.7z
+      mv "${TEMPROOT}/backupmain.tar.7z" "$BACKUPFILE"
    )
    RVAL="$?" 
    rm -r "${TEMPROOT}"
@@ -67,7 +67,7 @@ function restore {
    if [ -z "$1" ]; then die "No BACKUPFILE was specified." ; fi
    local BACKUPFILE=$(realpath "$1" | tr -d '\r\n')
    if [ ! -e "$BACKUPFILE" ]; then die "$BACKUPFILE doesn't exist. Aborting." ; fi
-   if [ -e "$SERVICEPATH" ]; then die "$SERVICENAME exists - destroy it before restoring from backup." ; fi
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}" ]; then die "$SERVICENAME exists - destroy it before restoring from backup." ; fi
    
    local TEMPROOT="$(mktemp -d)"
    
@@ -81,8 +81,8 @@ function restore {
       local TEMPC="${TEMPPARENT}/containerbackup"
       
       # decompress the main backup
-      cp "$BACKUPFILE" "${TEMPROOT}/${BACKUP_MAIN}"
-      "${SUPPORTPATH}/decompress" "$TEMPPARENT" "$TEMPROOT" "$BACKUP_MAIN"
+      cp "$BACKUPFILE" "${TEMPROOT}/backupmain.tar.7z"
+      "${ROOTPATH}/support/decompress" "$TEMPPARENT" "$TEMPROOT" "backupmain.tar.7z"
 
       # loads the old DOCKERVOLS and IMAGENAME
       source "${TEMPPARENT}/_oldvariables"

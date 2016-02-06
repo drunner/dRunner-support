@@ -238,10 +238,10 @@ function processdRunnerCommands {
 
       restore)
          if [ "$#" -ne 3 ]; then
-            dieusage "[PASS=?] drunner restore BACKUPFILE  SERVICENAME  "
+            dieusage "[PASS=?] drunner restore BACKUPFILE SERVICENAME  "
             exit 0
          fi
-         setServiceName "$3"         
+         SERVICENAME="$3"
          restore "$2"
          exit 0
          ;;
@@ -251,7 +251,7 @@ function processdRunnerCommands {
             dieusage "[PASS=?] drunner destroy SERVICENAME"
             exit 0
          fi
-         setServiceName "$2"
+         SERVICENAME="$2"
          destroy 
          exit 0
          ;;        

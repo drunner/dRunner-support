@@ -118,14 +118,18 @@ function destroy {
 
 
 #------------------------------------------------------------------------------------
-# array2string "${arr[@]:-""}" ; echo "$ARRAYSTR"
+# array2string "${arr[@]:-}" ; echo "$ARRAYSTR"
 # the string is intended for outputting to a file - e.g. MYVAR="$ARRAYSTR", which can
 # be read back in with source. Works with empty arrays, and empty strings in the array.
+
 function array2string {
    ARRAYSTR=""
-   printf -v ARRAYSTR "\"%s\" " "$@"
-   ARRAYSTR="(${ARRAYSTR})"
+   if [ -n "$1" ]; then
+      printf -v ARRAYSTR "\"%s\" " "$@"
+   fi
+   ARRAYSTR="(${ARRAYSTR% })"
 }
+
 
 #------------------------------------------------------------------------------------
 

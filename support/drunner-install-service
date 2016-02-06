@@ -103,10 +103,10 @@ function recreateservice {
    loadService "SKIPVALIDATION"
    
    # convert arrays to a string format suitable for later source'ing.
-   array2string "${DOCKERVOLS[@]:-""}" ;       STR_DOCKERVOLS="$ARRAYSTR"
-   array2string "${DOCKEROPTS[@]:-""}" ;       STR_DOCKEROPTS="$ARRAYSTR"
-   array2string "${VOLUMES[@]:-""}" ;          STR_VOLUMES="$ARRAYSTR"
-   array2string "${EXTRACONTAINERS[@]:-""}" ;  STR_EXTRACONTAINERS="$ARRAYSTR"
+   array2string "${DOCKERVOLS[@]:-}" ;       STR_DOCKERVOLS="$ARRAYSTR"
+   array2string "${DOCKEROPTS[@]:-}" ;       STR_DOCKEROPTS="$ARRAYSTR"
+   array2string "${VOLUMES[@]:-}" ;          STR_VOLUMES="$ARRAYSTR"
+   array2string "${EXTRACONTAINERS[@]:-}" ;  STR_EXTRACONTAINERS="$ARRAYSTR"
 
    # create _variables
    cat <<EOF >"${ROOTPATH}/services/${SERVICENAME}/drunner/_variables"
