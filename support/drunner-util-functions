@@ -76,7 +76,7 @@ function validate-image  {
    fi
    docker run --rm -v "${ROOTPATH}/support:/support" "${IMAGENAME}" /bin/bash -c "/support/validator-image"
    if [ "$?" -ne 0 ]; then 
-      die "Unable to continue because ${IMAGENAME} is not Docker Runner compatible."
+      die "${IMAGENAME} is not dRunner compatible."
    fi
    
    echo "${IMAGENAME} is dr compatible.">&2

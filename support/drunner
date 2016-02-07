@@ -71,6 +71,7 @@ SYNOPSIS
    drunner clean
    drunner list
    drunner update
+   drunner checkimage IMAGENAME
    
    [PASS=?] drunner backup  SERVICENAME BACKUPFILE
    [PASS=?] drunner restore BACKUPFILE  SERVICENAME  
@@ -220,6 +221,13 @@ function processdRunnerCommands {
             exit 0
          fi
          # otherwise fall through - we want to update a service not dr.
+         ;;
+         
+      checkimage)
+         [ "$#" -eq 2 ] || dieusage "drunner checkimage IMAGENAME"
+         IMAGENAME="$2"
+         validate-image
+         exit 0
          ;;
          
       install)
