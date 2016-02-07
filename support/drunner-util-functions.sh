@@ -74,12 +74,11 @@ function validate-image  {
    if [ ! -e "${ROOTPATH}/support/validator-image" ]; then
       die "Missing dr file: ${ROOTPATH}/support/validator-image"
    fi
-   docker run --rm -v "${ROOTPATH}/support:/support" "${IMAGENAME}" /bin/bash -c "/support/validator-image"
-   if [ "$?" -ne 0 ]; then 
-      die "${IMAGENAME} is not dRunner compatible."
-   fi
    
-   echo "${IMAGENAME} is dr compatible.">&2
+   # need to get validator-image into the container and run it with the containers UID (non-root)
+   docker run --rm -v "${ROOTPATH}/support/run_on_service:/support" "${IMAGENAME}" "/support/validator-image"
+   [ "$?" -eq 0 ] || die "${IMAGENAME} is not dRunner compatible."
+   echo "${IMAGENAME} is dRunner compatible."
 }
 
 
@@ -142,7 +141,7 @@ function destroy {
    loadService "SKIPVALIDATION"
 
    if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy
    fi
    
    # remove volume containers.

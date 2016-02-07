@@ -36,7 +36,7 @@ EOF
       # it might put stuff in them.
       getUSERID "$IMAGENAME"
       chown "${USERID}" "${TEMPC}"
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
                   
       # back up our volume containers
       if [ -v DOCKERVOLS ]; then
@@ -48,7 +48,7 @@ EOF
          done      
       fi
 
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupend "$TEMPC"
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupend "$TEMPC"
       
       # Compress everything with password
       "${ROOTPATH}/support/compress" "$TEMPPARENT" "$TEMPROOT" backupmain.tar.7z
@@ -123,7 +123,7 @@ function restore {
       
       # call through to container to restore its backup in TEMPC. Imporant this is the last step,
       # so it can use any docker volumes, the variables.sh file etc.
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" restore "$TEMPC"
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" restore "$TEMPC"
    )
    RVAL="$?"
    rm -r "${TEMPROOT}"  

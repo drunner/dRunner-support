@@ -67,7 +67,7 @@ function recreateservice {
    fi  
    # tighten up permissions
    chown -R root:root "${ROOTPATH}/services/${SERVICENAME}/drunner"
-   chmod -R a-w "${ROOTPATH}/services/${SERVICENAME}/drunner"
+   chmod -R 0500 "${ROOTPATH}/services/${SERVICENAME}/drunner"
    
    local DATESTAMP="$(TZ=Pacific/Auckland date -u +"%a, %d %b %Y %X %z")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
@@ -80,6 +80,9 @@ function recreateservice {
    array2string "${DOCKEROPTS[@]:-}" ;       STR_DOCKEROPTS="$ARRAYSTR"
    array2string "${VOLUMES[@]:-}" ;          STR_VOLUMES="$ARRAYSTR"
    array2string "${EXTRACONTAINERS[@]:-}" ;  STR_EXTRACONTAINERS="$ARRAYSTR"
+
+   # copy over utils.sh (and any others)
+   cp -r "${ROOTPATH}/support/for_services_drunner/*" "${ROOTPATH}/services/${SERVICENAME}/drunner/"
 
    # create variables.sh
    cat <<EOF >"${ROOTPATH}/services/${SERVICENAME}/drunner/variables.sh"
@@ -107,6 +110,8 @@ EOF
 
 # updateservice - udpates the service.
 function updateservice {
+   "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" updatestart || die "Update failed (${SERVICENAME}'s updatestart failed)."
+
    # ensure we have the latest support image. Issue here in that we don't update any other
    # images within the container.
    if [ "$PULLONUPDATE" -eq 1 ]; then
@@ -123,6 +128,8 @@ function updateservice {
          
    fi
    recreateservice
+   
+   "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" updateend || die "Update failed (${SERVICENAME}'s updateend failed)."
    
    echo "Updated ${SERVICENAME} from ${IMAGENAME}.">&2
    exit 0
@@ -152,10 +159,10 @@ function installservice {
       install_createVolumes
          
       # Finally run the install script in the service.         
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" install
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" install
       
       # validate
-      bash "${ROOTPATH}/support/validator-service" "$SERVICENAME" "NUKEOK"
+      "${ROOTPATH}/support/validator-service" "$SERVICENAME" "NUKEOK"
    )
    if [ $? -ne 0 ]; then
       destroy
