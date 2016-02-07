@@ -30,18 +30,19 @@ function die {
 }
 
 # Validate drunner is installed okay
-if [ ! -e "/etc/drunner/drunner.cfg" ]; then die "/etc/drunner/drunner.cfg missing." ; fi
-source "/etc/drunner/drunner.cfg"
-if [ ! -v ROOTPATH ]; then die "drunner.cfg doesn't set ROOTPATH."; fi
-if [ ! -v PULLONUPDATE ]; then die "drunner.cfg doesn't set PULLONUPDATE."; fi
-if [ ! -v SUPPORTIMAGE ]; then die "drunner.cfg doesn't set SUPPORTIMAGE."; fi
-if [ ! -v DRUNNERINSTALLURL ]; then die "drunner.cfg doesn't set DRUNNERINSTALLURL."; fi
-if [ ! -v DRUNNERINSTALLTIME ]; then die "drunner.cfg doesn't set DRUNNERINSTALLTIME."; fi
+if [ -e "/etc/drunner/drunner.cfg" ]; then die "You have an old installation of drunner. Try copying drunner.cfg to config.sh in /etc/drunner, then drunner update"
+if [ ! -e "/etc/drunner/config.sh" ]; then die "/etc/drunner/config.sh missing." ; fi
+source "/etc/drunner/config.sh"
+if [ ! -v ROOTPATH ]; then die "config.sh doesn't set ROOTPATH."; fi
+if [ ! -v PULLONUPDATE ]; then die "config.sh doesn't set PULLONUPDATE."; fi
+if [ ! -v SUPPORTIMAGE ]; then die "config.sh doesn't set SUPPORTIMAGE."; fi
+if [ ! -v DRUNNERINSTALLURL ]; then die "config.sh doesn't set DRUNNERINSTALLURL."; fi
+if [ ! -v DRUNNERINSTALLTIME ]; then die "config.sh doesn't set DRUNNERINSTALLTIME."; fi
 
 if [ ! -d "$ROOTPATH" ]; then die "$ROOTPATH doesn't exist."; fi
 
-if [ ! -e "${ROOTPATH}/support/buildtime" ]; then die "${ROOTPATH}/support/buildtime is missing." ; fi
-source "${ROOTPATH}/support/buildtime"
-if [ ! -v SUPPORTBUILDTIME ]; then die "buildtime doesn't set SUPPORTBUILDTIME." ; fi
+if [ ! -e "${ROOTPATH}/support/buildtime.sh" ]; then die "${ROOTPATH}/support/buildtime.sh is missing." ; fi
+source "${ROOTPATH}/support/buildtime.sh"
+if [ ! -v SUPPORTBUILDTIME ]; then die "buildtime.sh doesn't set SUPPORTBUILDTIME." ; fi
 
 exit 0

@@ -110,12 +110,12 @@ function loadService {
       if [ $? -ne 0 ]; then exit 1 ; fi
    fi
    
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/drunner/service.cfg"
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh" ]; then
+      source "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh"
    fi
    
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/_imagename" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/_imagename"
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/imagename.sh" ]; then
+      source "${ROOTPATH}/services/${SERVICENAME}/imagename.sh"
    fi
    
    if [ -v VOLUMES ]; then

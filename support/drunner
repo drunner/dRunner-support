@@ -26,11 +26,11 @@ set -o nounset
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
 
-source "/etc/drunner/drunner.cfg"
-source "${ROOTPATH}/support/buildtime"
-source "${ROOTPATH}/support/drunner-util-functions"
-source "${ROOTPATH}/support/drunner-install-service"
-source "${ROOTPATH}/support/drunner-backup-restore"
+source "/etc/drunner/config.sh"
+source "${ROOTPATH}/support/buildtime.sh"
+source "${ROOTPATH}/support/drunner-util-functions.sh"
+source "${ROOTPATH}/support/drunner-install-service.sh"
+source "${ROOTPATH}/support/drunner-backup-restore.sh"
 
 if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
 if ! command_exists docker ; then die "Requires docker to be installed." ; fi
@@ -43,8 +43,8 @@ function showservices {
    # list available services. 
    echo "AVAILABLE SERVICES"
    find "$ROOTPATH/services" -maxdepth 1 -mindepth 1 -type d | while read SPATH; do 
-      if [ -e "${SPATH}/_imagename" ]; then
-         source "${SPATH}/_imagename"
+      if [ -e "${SPATH}/imagename.sh" ]; then
+         source "${SPATH}/imagename.sh"
          printf "   %-15s - %-55s\n" "${SPATH##*/}" "$IMAGENAME"
       else
          printf "   %-15s - %-55s\n" "${SPATH##*/}" "Broken service"

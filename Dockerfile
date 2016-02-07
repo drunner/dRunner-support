@@ -11,7 +11,7 @@ RUN apt-get update && \
 # add in the assets.
 COPY ["./support","/support"]
 COPY ["./usrlocalbin","/usr/local/bin/"]
-RUN echo "SUPPORTBUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /support/buildtime && \
+RUN echo "SUPPORTBUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /support/buildtime.sh && \
       chmod a+rx -R /usr/local/bin  &&  \
       chmod a-w -R /support
 

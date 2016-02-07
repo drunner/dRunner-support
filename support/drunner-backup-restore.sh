@@ -122,7 +122,7 @@ function restore {
       fi
       
       # call through to container to restore its backup in TEMPC. Imporant this is the last step,
-      # so it can use any docker volumes, the _variables file etc.
+      # so it can use any docker volumes, the variables.sh file etc.
       bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" restore "$TEMPC"
    )
    RVAL="$?"
