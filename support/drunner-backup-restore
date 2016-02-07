@@ -36,17 +36,19 @@ EOF
       # it might put stuff in them.
       getUSERID "$IMAGENAME"
       chown "${USERID}" "${TEMPC}"
-      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backup "$TEMPC"
+      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
                   
       # back up our volume containers
       if [ -v DOCKERVOLS ]; then
          for VOLNAME in "${DOCKERVOLS[@]}"; do      
             volexists "$VOLNAME"
-            if [ $? -ne 0 ]; then die "A docker volume required for the backup was missing: $VOLNAME"; fi
+            [ $? -eq 0 ] || die "A docker volume required for the backup was missing: $VOLNAME"
             "${ROOTPATH}/support/compress" "$VOLNAME" "${TEMPF}" "${VOLNAME}.tar.7z"
-            if [ ! -e "${TEMPF}/${VOLNAME}.tar.7z" ]; then die "Unable to back up ${VOLNAME}." ; fi
+            [ -e "${TEMPF}/${VOLNAME}.tar.7z" ] || die "Unable to back up ${VOLNAME}."
          done      
       fi
+
+      bash "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupend "$TEMPC"
       
       # Compress everything with password
       "${ROOTPATH}/support/compress" "$TEMPPARENT" "$TEMPROOT" backupmain.tar.7z
@@ -54,7 +56,7 @@ EOF
    )
    RVAL="$?" 
    rm -r "${TEMPROOT}"
-   if [ $RVAL -ne 0 ]; then die "Backup failed. Temp files have been removed." ; fi
+   [ $RVAL -eq 0 ] || die "Backup failed. Temp files have been removed."
    
    echo " ">&2
    echo "Backed up to $BACKUPFILE succesfully.">&2

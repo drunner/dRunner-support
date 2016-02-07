@@ -173,7 +173,7 @@ function processServiceCommands {
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
-         local RESERVEDWORDS=("install" "backup" "restore" "destroy" "update" "enter")
+         local RESERVEDWORDS=("install" "backupstart" "backupend" "backup" "restore" "destroy" "update" "enter")
          if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
             showservicehelp
          elif elementIn "$3" "${RESERVEDWORDS[@]}"; then 
