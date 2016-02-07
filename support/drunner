@@ -65,8 +65,7 @@ NAME
 VERSION
    drunner:         ${DRUNNERINSTALLTIME}
    drunner-support: ${SUPPORTBUILDTIME}
-   
-   drunner url:     ${DRUNNERINSTALLURL}
+   drunner-install: ${DRUNNERINSTALLURL}
    
 SYNOPSIS
    drunner clean
@@ -103,10 +102,10 @@ EOF
 function updatedr {
    # use the container to get the latest dr-install script.
    local TEMPDIR="$(mktemp -d)"
-   docker run -i -t --name="get-drunner-install" -v "${TEMPDIR}:/tempdir" \
-               "${SUPPORTIMAGE}" get-drunner-install "/tempdir" "$DRUNNERINSTALLURL"
+   echo "Downloading from $DRUNNERINSTALLURL"
+   docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "${SUPPORTIMAGE}" bash -c "wget --no-cache -nv -O /tempdir/drunner-install ${DRUNNERINSTALLURL}" >/dev/null
    local RVAL="$?"
-   docker rm "get-drunner-install" >/dev/null 2>&1
+   docker rm "drunner-downloadfile" >/dev/null 2>&1
 
    if [ "$RVAL" -ne 0 ]; then die "Unable to get drunner-install.">&2 ; fi
    if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
