@@ -14,16 +14,18 @@ readonly CODE_E="\e[0m"
 
 # die MESSAGE 
 function die {
+   [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || { echo -e "\e[31m\e[1mThere's no installed service called \"${SERVICENAME}\".\e[0m" ; exit 1 ; }
+
    echo -e " ">&2
    echo -e "\e[31m\e[1mService broken. ${1}\e[0m">&2
    echo -e " ">&2
    
-   if [ -z $NUKEOK ]; then
-      echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
-      echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
-      echo -e "should be preserved if you're coming from a stable release.">&2
-      echo -e " ">&2
-   fi
+   [ -z $NUKEOK ] || exit 1
+      
+   echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
+   echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
+   echo -e "should be preserved if you're coming from a stable release.">&2
+   echo -e " ">&2
    exit 1
 }
 
