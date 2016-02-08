@@ -2,14 +2,15 @@
 
 #-----------------------------------------------------------------------------------------------------------------------------
 
+# print an error message.
+function errecho {
+   echo " ">&2 ; echo -e "\e[31m\e[1m${1}\e[0m">&2  ; echo " ">&2
+}
+
 # die MESSAGE 
 # colourful way to die.
 function die {
-   if [ -n "$1" ]; then
-      echo " ">&2 ; echo -e "\e[31m\e[1m${1}\e[0m">&2  ; echo " ">&2
-   else
-      echo " ">&2 ; echo -e "\e[31m\e[1mUnexpected error. Exiting.\e[0m">&2  ; echo " ">&2
-      fi
+   errecho "${1:-"Unexpected error and we died with no message."}"
    exit 1
 }
 
@@ -95,27 +96,25 @@ function array2string {
    ARRAYSTR="(${ARRAYSTR% })"
 }
 
+#------------------------------------------------------------------------------------
+
+# silentSource SOURCEFILE
+function silentSource {
+   if [ -e "$1" ]; then
+      source "$1" || echo "Error sourcing ${1}... corrupt?"
+   fi
+}
 
 #------------------------------------------------------------------------------------
 
-# loadService [SKIPVALIDATION]
-# if validation is skipped then it requires SERVICENAME and ROOTPATH, but copes with
-# anything else.
-function loadService {
-   SKIPVALIDATION=${1:-""}   
-   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "loadService - SERVICENAME not defined." ; fi
-   if [ -z $SKIPVALIDATION ]; then 
-      bash "${ROOTPATH}/support/validator-service" "$SERVICENAME"
-      if [ $? -ne 0 ]; then exit 1 ; fi
-   fi
-   
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh"
-   fi
-   
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/imagename.sh" ]; then
-      source "${ROOTPATH}/services/${SERVICENAME}/imagename.sh"
-   fi
+# loadServiceSilent
+# Requires SERVICENAME and ROOTPATH, but copes with anything else.
+function loadServiceSilent {   
+   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't load service because SERVICENAME is not set." ; fi
+   if [ ! -v ROOTPATH ] || [ -d "$ROOTPATH" ]; then die "Can't load service because ROOTPATH doesn't exist." ; fi
+
+   silentSource "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh"
+   silentSource "${ROOTPATH}/services/${SERVICENAME}/imagename.sh"
    
    if [ -v VOLUMES ]; then
       for i in "${!VOLUMES[@]}"; do
@@ -128,22 +127,48 @@ function loadService {
 
 #------------------------------------------------------------------------------------
 
-# destroy
-# destroys everything we can about a service!
+# validateLoadService
+# Validate the service is fully okay, then load it.
+function validateLoadService {
+   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "validateLoadService - SERVICENAME not defined." ; fi
+   "${ROOTPATH}/support/validator-service" "$SERVICENAME" || exit 1
+   
+   loadServiceSilent
+}
+
+#------------------------------------------------------------------------------------
+
+# destroys everything we can about a service, except the Docker volumes.
 # requires both SERVICENAME and ROOTPATH to be set. Assumes nothing else.
-function destroy {   
+function destroyservice_preservingvolumes {
    # call destroy in service.
-   if [ ! -v SERVICENAME ]; then 
-      die "Can't destroy because SERVICENAME is not set."
+   if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't destroy because SERVICENAME is not set." ; fi
+   
+   # attempt to read the service info, if present.
+   loadServiceSilent
+      
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy || errecho "Calling servicerunner destroy failed."
    fi
 
-   # attempt to read the service info, if present.
-   loadService "SKIPVALIDATION"
-
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
-      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy
+   # remove launch script
+   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
+      rm "/usr/local/bin/${SERVICENAME}" || errecho "Couldn't remove launch script: /usr/local/bin/${SERVICENAME}"
    fi
    
+   # delete service directoy.
+   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
+      rm -r "${ROOTPATH}/services/${SERVICENAME}" || errecho "Couldn't remove service tree: ${ROOTPATH}/services/${SERVICENAME}"
+   fi
+}
+
+#------------------------------------------------------------------------------------
+
+
+# destroy the Docker service, including all data and configuration volumes
+function destroyservice_destroyvolumes { 
+   destroyservice_preservingvolumes
+       
    # remove volume containers.
    if [ -v DOCKERVOLS ]; then
       for VOLNAME in "${DOCKERVOLS[@]}"; do      
@@ -151,18 +176,6 @@ function destroy {
          echo "Destroyed docker volume ${VOLNAME}."
       done
    fi
-   
-   # remove launch script
-   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
-      rm "/usr/local/bin/${SERVICENAME}"
-   fi
-   
-   # delete service directoy.
-   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
-      rm -r "${ROOTPATH}/services/${SERVICENAME}"
-   fi
-   
-   echo "Service $SERVICENAME has been destroyed."
 }
 
 

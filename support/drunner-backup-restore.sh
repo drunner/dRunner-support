@@ -10,6 +10,9 @@ function backup {
    local BACKUPFILE=$(realpath "$1" | tr -d '\r\n')
    if [ -e "$BACKUPFILE" ]; then die "$BACKUPFILE already exists. Aborting." ; fi
    
+   # only backup valid services. (otherwise recover then backup!)
+   "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Use ${CODE_S}drunner recover ${SERVICENAME}${CODE_E} before backing up."
+   
    local TEMPROOT="$(mktemp -d)"
    
    ( # SUBSHELL so we can tidy up easily if it goes wrong.
@@ -105,7 +108,7 @@ function restore {
       if [ $RVAL -ne 0 ]; then echo "Fail on install - aborting.">&2 ; exit $RVAL ; fi
       
       # load DOCKERVOLS etc so we can restore the volumes.
-      loadService
+      validateLoadService
          
       # restore volumes.
       # zip file names are based on the _old_ DOCKERVOLS, new volume name based on hte new ones.
@@ -129,8 +132,7 @@ function restore {
    rm -r "${TEMPROOT}"  
    if [ $RVAL -ne 0 ]; then 
       if [ -e "${ROOTPATH}/services/${SERVICENAME}" ]; then 
-         echo "destroy"
-         destroy 
+         destroyservice_destroyvolumes 
       fi
       die "Restore failed. Temp files have been removed, system back in clean state."
    fi

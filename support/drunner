@@ -78,6 +78,7 @@ SYNOPSIS
    
    drunner install IMAGENAME [SERVICENAME]
    drunner update  SERVICENAME
+   drunner recover SERVICENAME
    drunner destroy SERVICENAME
    drunner enter   SERVICENAME [ARGS]
    
@@ -126,7 +127,7 @@ function updatedr {
 #------------------------------------------------------------------------------------
 
 function showservicehelp {
-   if [ -z $SERVICENAME ]; then die "Can't show service help when we don't know what service it is."; fi
+   if [ -z "$SERVICENAME" ]; then die "Can't show service help when we don't know what service it is."; fi
    local SERVICERUNNER="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
 
    if [ -e "$SERVICERUNNER" ]; then
@@ -150,7 +151,8 @@ function processServiceCommands {
    fi
 
    SERVICENAME="$2"
-   loadService
+   [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "Unrecognised service: ${SERVICENAME}. Is it installed?"
+   validateLoadService
       
    case "$1" in
       update)
@@ -256,14 +258,29 @@ function processdRunnerCommands {
          restore "$2"
          exit 0
          ;;
-
-      destroy)
-         if [ "$#" -ne 2 ]; then
-            dieusage "[PASS=?] drunner destroy SERVICENAME"
-            exit 0
+         
+      recover)
+         if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+            dieusage "drunner recover SERVICENAME [IMAGENAME]"
          fi
          SERVICENAME="$2"
-         destroy 
+         [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. To recover, install it (any existing Docker volumes will be preserved)."
+         
+         IMAGENAME=""
+         destroyservice_preservingvolumes
+
+         [ "$#" -lt 3 ] || IMAGENAME="$3"
+         [ -n IMAGENAME ] || die "${SERVICENAME} is missing it's image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
+         
+         installservice       
+         exit 0
+         ;;         
+
+      destroy)
+         [ "$#" -eq 2 ] || dieusage "[PASS=?] drunner destroy SERVICENAME"
+         SERVICENAME="$2"
+         destroyservice_destroyvolumes
+         echo "The host has been cleaned of ${SERVICENAME} and its containers."
          exit 0
          ;;        
    esac  

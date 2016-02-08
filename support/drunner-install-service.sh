@@ -44,7 +44,6 @@ function install_createVolumes {
 # recreateservice
 # called by both install and SERVICE update.
 function recreateservice {   
-   NUKEOK=${1:-""}
    # the directory that the container will update.
    if [ ! -v SERVICENAME ]; then die "SERVICENAME undefined." ; fi
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then rm -r "${ROOTPATH}/services/${SERVICENAME}" ; fi
@@ -72,8 +71,8 @@ function recreateservice {
    local DATESTAMP="$(TZ=Pacific/Auckland date -u +"%a, %d %b %Y %X %z")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
 
-   # loadService to get the VOLUMES and related vars.
-   loadService "SKIPVALIDATION"
+   # loadServiceSilent gets the VOLUMES and related vars. We haven't finished creating it, so go silent!
+   loadServiceSilent
    
    # convert arrays to a string format suitable for later source'ing.
    array2string "${DOCKERVOLS[@]:-}" ;       STR_DOCKERVOLS="$ARRAYSTR"
@@ -154,7 +153,7 @@ function installservice {
       set -e
       
       validate-image 
-      recreateservice "NUKEOK"
+      recreateservice
       install_createlaunchscript
       install_createVolumes
          
