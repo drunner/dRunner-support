@@ -282,7 +282,7 @@ function processdRunnerCommands {
          destroyservice_preservingvolumes
 
          [ "$#" -lt 3 ] || IMAGENAME="$3"
-         [ -n IMAGENAME ] || die "${SERVICENAME} is missing it's image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
+         [ -n "$IMAGENAME" ] || die "${SERVICENAME} is missing it's image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
          
          installservice       
          exit 0
