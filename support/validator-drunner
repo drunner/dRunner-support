@@ -30,7 +30,7 @@ function die {
 }
 
 # Validate drunner is installed okay
-[ ! -e "/etc/drunner/drunner.cfg" ] || die "You have an old installation of drunner. Try copying drunner.cfg to config.sh in /etc/drunner, then drunner update"
+[ ! -e "/etc/drunner/drunner.cfg" ] || die "You have an old installation of drunner. Try moving drunner.cfg to config.sh in /etc/drunner, then drunner update"
 [ -e "/etc/drunner/config.sh" ] || die "/etc/drunner/config.sh missing."
 
 source "/etc/drunner/config.sh"
