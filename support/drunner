@@ -27,6 +27,8 @@ readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
 
 source "/etc/drunner/config.sh"
+[ -d ${ROOTPATH} ] || { echo "Installation broken. Please run drunner-install again.">&2 ; exit 1 ; }
+
 source "${ROOTPATH}/support/buildtime.sh"
 source "${ROOTPATH}/support/drunner-util-functions.sh"
 source "${ROOTPATH}/support/drunner-install-service.sh"
@@ -81,6 +83,7 @@ SYNOPSIS
    drunner recover SERVICENAME
    drunner destroy SERVICENAME
    drunner enter   SERVICENAME [ARGS]
+   drunner status  SERVICENAME
    
    SERVICENAME
    SERVICENAME COMMAND ARGS
@@ -256,6 +259,15 @@ function processdRunnerCommands {
          fi
          SERVICENAME="$3"
          restore "$2"
+         exit 0
+         ;;
+         
+      status) 
+         [ "$#" -eq 2 ] || dieusage "drunner status SERVICENAME"
+         SERVICENAME="$2"
+         [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. If you need to recover, install it and any existing Docker volumes will be preserved."
+         "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Validation failed!"
+         echo "${SERVICENAME} is installed and okay."
          exit 0
          ;;
          

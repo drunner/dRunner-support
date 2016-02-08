@@ -26,7 +26,7 @@ function install_createVolumes {
          VOLPATH="${VOLUMES[i]}"
 
          if volexists "$VOLNAME" ; then 
-            echo "A docker volume already exists for: $VOLNAME. Reusing it.";
+            echo "A docker volume exists for: $VOLNAME. Reusing it.";
          else
             docker volume create --name="$DNAME" >/dev/null
             # set permissions on config volume
@@ -80,8 +80,8 @@ function recreateservice {
    array2string "${VOLUMES[@]:-}" ;          STR_VOLUMES="$ARRAYSTR"
    array2string "${EXTRACONTAINERS[@]:-}" ;  STR_EXTRACONTAINERS="$ARRAYSTR"
 
-   # copy over utils.sh (and any others)
-   cp -r "${ROOTPATH}/support/for_services_drunner/*" "${ROOTPATH}/services/${SERVICENAME}/drunner/"
+   # copy over utils.sh (and any others). Need to use bash since bash expands the wildcards, not cp
+   bash -c "cp -r ${ROOTPATH}/support/for_services_drunner/* ${ROOTPATH}/services/${SERVICENAME}/drunner/"
 
    # create variables.sh
    cat <<EOF >"${ROOTPATH}/services/${SERVICENAME}/drunner/variables.sh"
@@ -130,6 +130,9 @@ function updateservice {
    
    "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" updateend || die "Update failed (${SERVICENAME}'s updateend failed)."
    
+   # validate
+   "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Update failed."
+   
    echo "Updated ${SERVICENAME} from ${IMAGENAME}.">&2
    exit 0
 }
@@ -145,13 +148,13 @@ function installservice {
 
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
       echo -e "${SERVICENAME} is already installed at ${ROOTPATH}/services/${SERVICENAME}. Initialisation cancelled.">&2
-      echo -e "Try ${CODE_S}drunner ${SERVICENAME} update${CODE_E} instead.">&2
+      echo -e "Try ${CODE_S}drunner update ${SERVICENAME}${CODE_E} instead.">&2
       exit 1
    fi
 
    (      
       set -e
-      
+            
       validate-image 
       recreateservice
       install_createlaunchscript
@@ -164,8 +167,8 @@ function installservice {
       "${ROOTPATH}/support/validator-service" "$SERVICENAME" "NUKEOK"
    )
    if [ $? -ne 0 ]; then
-      destroy
-      die "Installation failed. ${CODE_E} System returned to clean state."
+      destroyservice_preservingvolumes
+      die "Installation failed. ${CODE_E} System returned to clean state but all volumes preserved."
    fi
     
    # TODO: If we had errors then destroy everything!

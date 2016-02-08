@@ -72,8 +72,8 @@ function elementIn {
 function validate-image  {
    if [ ! -v ROOTPATH ] || [ -z "$ROOTPATH" ]; then die "validate-image: ROOTPATH is not set." ; fi
    if [ ! -v IMAGENAME ] || [ -z "$IMAGENAME" ]; then die "validate-image: IMAGENAME is not set." ; fi
-   if [ ! -e "${ROOTPATH}/support/validator-image" ]; then
-      die "Missing dr file: ${ROOTPATH}/support/validator-image"
+   if [ ! -e "${ROOTPATH}/support/run_on_service/validator-image" ]; then
+      die "Missing dRunner file: ${ROOTPATH}/support/run_on_service/validator-image"
    fi
    
    # need to get validator-image into the container and run it with the containers UID (non-root)
@@ -111,7 +111,7 @@ function silentSource {
 # Requires SERVICENAME and ROOTPATH, but copes with anything else.
 function loadServiceSilent {   
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't load service because SERVICENAME is not set." ; fi
-   if [ ! -v ROOTPATH ] || [ -d "$ROOTPATH" ]; then die "Can't load service because ROOTPATH doesn't exist." ; fi
+   if [ ! -v ROOTPATH ] || [ ! -d "$ROOTPATH" ]; then die "Can't load service because ROOTPATH doesn't exist." ; fi
 
    silentSource "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh"
    silentSource "${ROOTPATH}/services/${SERVICENAME}/imagename.sh"

@@ -22,9 +22,9 @@ function die {
    
    [ -z "$NUKEOK" ] || exit 1
       
-   echo -e "You can try moving the folder aside (${ROOTPATH}/services/${SERVICENAME})">&2
-   echo -e "then installing with the same SERVICENAME and IMAGENAME. Data and configuration">&2
-   echo -e "should be preserved if you're coming from a stable release.">&2
+   echo -e " ">&2
+   echo -e "You can try recovering with ${CODE_S}drunner recover ${SERVICENAME}${CODE_E}.">&2
+   echo -e "That will preserve data and configuration and should be safe to try.">&2
    echo -e " ">&2
    exit 1
 }
@@ -54,7 +54,7 @@ for CFILE in "${REQDFILES[@]}"; do
    [ -e "${ROOTPATH}/services/${SERVICENAME}/$CFILE" ] || die "Required file not present: $CFILE"
 done
 
-readonly SOURCEFILES=("imagename.sh" "drunner/servicecfg.sh" "drunner/variables.sh")
+readonly SOURCEFILES=("imagename.sh" "drunner/servicecfg.sh" "drunner/variables.sh" "drunner/utils.sh")
 for CFILE in "${SOURCEFILES[@]}"; do
    [ -e "${ROOTPATH}/services/${SERVICENAME}/$CFILE" ] || die "Required file not present: $CFILE"
    source "${ROOTPATH}/services/${SERVICENAME}/$CFILE" || die "Couldn't source ${ROOTPATH}/services/${SERVICENAME}/$CFILE"
