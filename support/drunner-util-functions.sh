@@ -140,17 +140,13 @@ function validateLoadService {
 
 # destroys everything we can about a service, except the Docker volumes.
 # requires both SERVICENAME and ROOTPATH to be set. Assumes nothing else.
-function destroyservice_preservingvolumes {
+function destroyService_low {
    # call destroy in service.
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't destroy because SERVICENAME is not set." ; fi
    
    # attempt to read the service info, if present.
    loadServiceSilent
       
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
-      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" destroy || errecho "Calling servicerunner destroy failed."
-   fi
-
    # remove launch script
    if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
       rm "/usr/local/bin/${SERVICENAME}" || errecho "Couldn't remove launch script: /usr/local/bin/${SERVICENAME}"
@@ -162,12 +158,24 @@ function destroyservice_preservingvolumes {
    fi
 }
 
+function uninstallService {
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" uninstall || errecho "Calling servicerunner destroy failed."
+   fi
+
+   destroyService_low
+}
+
 #------------------------------------------------------------------------------------
 
 
 # destroy the Docker service, including all data and configuration volumes
-function destroyservice_destroyvolumes { 
-   destroyservice_preservingvolumes
+function obliterateService { 
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" obliterate || errecho "Calling servicerunner destroy failed."
+   fi
+
+   destroyService_low
        
    # remove volume containers.
    if [ -v DOCKERVOLS ]; then

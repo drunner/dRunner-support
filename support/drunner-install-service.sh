@@ -167,7 +167,7 @@ function installservice {
       "${ROOTPATH}/support/validator-service" "$SERVICENAME" "NUKEOK"
    )
    if [ $? -ne 0 ]; then
-      destroyservice_preservingvolumes
+      uninstallService
       die "Installation failed. ${CODE_E} System returned to clean state but all volumes preserved."
    fi
     

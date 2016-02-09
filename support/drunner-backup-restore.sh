@@ -132,7 +132,7 @@ function restore {
    rm -r "${TEMPROOT}"  
    if [ $RVAL -ne 0 ]; then 
       if [ -e "${ROOTPATH}/services/${SERVICENAME}" ]; then 
-         destroyservice_destroyvolumes 
+         obliterateService 
       fi
       die "Restore failed. Temp files have been removed, system back in clean state."
    fi

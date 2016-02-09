@@ -78,12 +78,13 @@ SYNOPSIS
    [PASS=?] drunner backup  SERVICENAME BACKUPFILE
    [PASS=?] drunner restore BACKUPFILE  SERVICENAME  
    
-   drunner install IMAGENAME [SERVICENAME]
-   drunner update  SERVICENAME
-   drunner recover SERVICENAME
-   drunner destroy SERVICENAME
-   drunner enter   SERVICENAME [ARGS]
-   drunner status  SERVICENAME
+   drunner install    IMAGENAME [SERVICENAME]
+   drunner update     SERVICENAME
+   drunner recover    SERVICENAME
+   drunner uninstall  SERVICENAME
+   drunner obliterate SERVICENAME
+   drunner enter      SERVICENAME [ARGS]
+   drunner status     SERVICENAME
    
    SERVICENAME
    SERVICENAME COMMAND ARGS
@@ -178,7 +179,7 @@ function processServiceCommands {
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
-         local RESERVEDWORDS=("install" "backupstart" "backupend" "backup" "restore" "destroy" "update" "enter")
+         local RESERVEDWORDS=("install" "backupstart" "backupend" "backup" "restore" "update" "enter" "uninstall" "obliterate")
          if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
             showservicehelp
          elif elementIn "$3" "${RESERVEDWORDS[@]}"; then 
@@ -235,6 +236,12 @@ function processdRunnerCommands {
          exit 0
          ;;
          
+      dinstall)
+         [ "$#" -eq 2 ] && { drunner install "drunner/$2" ; exit "$?" ; }
+         [ "$#" -eq 3 ] && { drunner install "drunner/$2" "$3" ; exit "$?" ; }
+         dieusage "drunner dinstall IMAGENAME [SERVICENAME]"
+         ;;         
+         
       install)
          if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
             dieusage "drunner install IMAGENAME [SERVICENAME]"
@@ -279,7 +286,7 @@ function processdRunnerCommands {
          [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. To recover, install it (any existing Docker volumes will be preserved)."
          
          IMAGENAME=""
-         destroyservice_preservingvolumes
+         uninstallService
 
          [ "$#" -lt 3 ] || IMAGENAME="$3"
          [ -n "$IMAGENAME" ] || die "${SERVICENAME} is missing it's image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
@@ -287,12 +294,20 @@ function processdRunnerCommands {
          installservice       
          exit 0
          ;;         
-
-      destroy)
-         [ "$#" -eq 2 ] || dieusage "[PASS=?] drunner destroy SERVICENAME"
+         
+      uninstall)
+         [ "$#" -eq 2 ] || dieusage "drunner "$1" SERVICENAME"
          SERVICENAME="$2"
-         destroyservice_destroyvolumes
-         echo "The host has been cleaned of ${SERVICENAME} and its containers."
+         uninstallService
+         echo "${SERVICENAME} uninstalled. Data and configuration containers retained, install will restore the service."
+         exit 0         
+         ;;
+
+      obliterate)
+         [ "$#" -eq 2 ] || dieusage "drunner "$1" SERVICENAME"
+         SERVICENAME="$2"
+         obliterateService
+         echo "The host has been obliterated of ${SERVICENAME} and its containers - all data destroyed."
          exit 0
          ;;        
    esac  
