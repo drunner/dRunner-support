@@ -235,13 +235,7 @@ function processdRunnerCommands {
          validate-image
          exit 0
          ;;
-         
-      dinstall)
-         [ "$#" -eq 2 ] && { drunner install "drunner/$2" ; exit "$?" ; }
-         [ "$#" -eq 3 ] && { drunner install "drunner/$2" "$3" ; exit "$?" ; }
-         dieusage "drunner dinstall IMAGENAME [SERVICENAME]"
-         ;;         
-         
+                  
       install)
          if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
             dieusage "drunner install IMAGENAME [SERVICENAME]"
