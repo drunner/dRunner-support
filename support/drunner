@@ -189,11 +189,8 @@ function processServiceCommands {
             SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
             SUBCOMMAND="$3"
             shift 3
-            if [ -e "${SCRIPTTORUN}" ]; then
-               bash "${SCRIPTTORUN}" "$SUBCOMMAND" "$@"
-            else
-               showservicehelp
-            fi
+            [ -e "${SCRIPTTORUN}" ] || die "${SERVICENAME} is broken. Try ${CODE_S}drunner recover ${SERVICENAME}${CODE_E}"
+            "${SCRIPTTORUN}" "$SUBCOMMAND" "$@"
          fi
          ;;
 

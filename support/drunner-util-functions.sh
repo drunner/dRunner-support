@@ -165,6 +165,7 @@ function destroyService_low {
 function uninstallService {
    ERRORFREE=0
    
+   # important to call this first (e.g. to stop services)
    if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" uninstall || errecho "Calling servicerunner uninstall failed."
    fi
@@ -181,6 +182,7 @@ function uninstallService {
 function obliterateService { 
    ERRORFREE=0
    
+   # important to call this first (e.g. to stop services)
    if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" obliterate || errecho "Calling servicerunner obliterate failed."
    fi
