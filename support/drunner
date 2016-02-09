@@ -277,13 +277,12 @@ function processdRunnerCommands {
             dieusage "drunner recover SERVICENAME [IMAGENAME]"
          fi
          SERVICENAME="$2"
-         [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. To recover, install it (any existing Docker volumes will be preserved)."
-         
-         IMAGENAME=""
          uninstallService
 
+         IMAGENAME=""
+         loadServiceSilent
          [ "$#" -lt 3 ] || IMAGENAME="$3"
-         [ -n "$IMAGENAME" ] || die "${SERVICENAME} is missing it's image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
+         [ -n "$IMAGENAME" ] || die "${SERVICENAME} does not have an existing image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
          
          installservice       
          exit 0
