@@ -291,16 +291,16 @@ function processdRunnerCommands {
       uninstall)
          [ "$#" -eq 2 ] || dieusage "drunner "$1" SERVICENAME"
          SERVICENAME="$2"
-         uninstallService
-         echo "${SERVICENAME} uninstalled. Data and configuration containers retained, install will restore the service."
+         uninstallService || die "${SERVICENAME} uninstalled, but there were errors."
+         echo "${SERVICENAME} uninstalled. Data retained. Install again to recover."
          exit 0         
          ;;
 
       obliterate)
          [ "$#" -eq 2 ] || dieusage "drunner "$1" SERVICENAME"
          SERVICENAME="$2"
-         obliterateService
-         echo "The host has been obliterated of ${SERVICENAME} and its containers - all data destroyed."
+         obliterateService || die "${SERVICENAME} obliterated, but there were errors."
+         echo "${SERVICENAME} and its containers obliterated - all data destroyed."
          exit 0
          ;;        
    esac  

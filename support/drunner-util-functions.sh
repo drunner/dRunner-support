@@ -5,6 +5,7 @@
 # print an error message.
 function errecho {
    echo " ">&2 ; echo -e "\e[31m\e[1m${1}\e[0m">&2  ; echo " ">&2
+   ERRORFREE=1
 }
 
 # die MESSAGE 
@@ -158,12 +159,19 @@ function destroyService_low {
    fi
 }
 
+#------------------------------------------------------------------------------------
+
+# uninstall the service.
 function uninstallService {
+   ERRORFREE=0
+   
    if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
-      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" uninstall || errecho "Calling servicerunner destroy failed."
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" uninstall || errecho "Calling servicerunner uninstall failed."
    fi
 
    destroyService_low
+
+   return "$ERRORFREE"
 }
 
 #------------------------------------------------------------------------------------
@@ -171,8 +179,10 @@ function uninstallService {
 
 # destroy the Docker service, including all data and configuration volumes
 function obliterateService { 
+   ERRORFREE=0
+   
    if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
-      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" obliterate || errecho "Calling servicerunner destroy failed."
+      "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" obliterate || errecho "Calling servicerunner obliterate failed."
    fi
 
    destroyService_low
@@ -184,6 +194,8 @@ function obliterateService {
          echo "Destroyed docker volume ${VOLNAME}."
       done
    fi
+   
+   return "$ERRORFREE"
 }
 
 
