@@ -146,56 +146,58 @@ function showservicehelp {
 
 #------------------------------------------------------------------------------------
 
+function setServiceName {
+   [ "$#" -gt 0 ] || { showusage ; die "drunner $DCOMMAND requires the SERVICENAME." ; }
+   SERVICENAME="$1"
+   [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "Unrecognised service: ${SERVICENAME}. Is it installed?"
+   validateLoadService
+}
+
+#------------------------------------------------------------------------------------
+
 # processServiceCommands COMMAND SERVICENAME [ARGS..]
 function processServiceCommands {
    # all these commands have SERVICENAME as second argument.
-   if [ "$#" -lt 2 ]; then
-      showusage
-      exit 0
-   fi
-
-   SERVICENAME="$2"
-   [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "Unrecognised service: ${SERVICENAME}. Is it installed?"
-   validateLoadService
-      
-   case "$1" in
+   DCOMMAND="$1" ; shift
+   case "$DCOMMAND" in
       update)
+         setServiceName "$@" ; shift
          updateservice
          ;;
                   
       backup)
-         if [ "$#" -eq 3 ]; then
-            backup "$3"
+         if [ "$#" -eq 2 ]; then
+            setServiceName "$@" ; shift
+            backup "$1"
          else
             dieusage "[PASS=?] drunner backup SERVICENAME BACKUPFILE"
          fi
          ;;
          
       enter)
+         setServiceName "$@" ; shift
          SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
-         shift 2 
          bash "${SCRIPTTORUN}" "enter" "$@"
          ;;
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
+         setServiceName "$@" ; shift
          local RESERVEDWORDS=("install" "backupstart" "backupend" "backup" "restore" "update" "enter" "uninstall" "obliterate")
-         if [ "$#" -lt 3 ] || [ "$3" = "help" ]; then
+         if [ "$#" -eq 0 ] || [ "$1" = "help" ]; then
             showservicehelp
-         elif elementIn "$3" "${RESERVEDWORDS[@]}"; then 
-            echo -e "$3 is a reserved word. Try ${CODE_S}drunner ${3} ${SERVICENAME}${CODE_E} instead.">&2
-            exit 1
+         elif elementIn "$1" "${RESERVEDWORDS[@]}"; then 
+            die "$1 is a reserved word. Try ${CODE_S}drunner ${1} ${SERVICENAME}${CODE_E} instead."
          else
             SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
-            SUBCOMMAND="$3"
-            shift 3
+            SUBCOMMAND="$1" ; shift
             [ -e "${SCRIPTTORUN}" ] || die "${SERVICENAME} is broken. Try ${CODE_S}drunner recover ${SERVICENAME}${CODE_E}"
             "${SCRIPTTORUN}" "$SUBCOMMAND" "$@"
          fi
          ;;
 
       *)
-         showservicehelp
+         die "Unknown command $1"
    esac     
 }
 
@@ -206,7 +208,8 @@ function processServiceCommands {
 function processdRunnerCommands {
    # start with high level commands (clean, list, update), and commands on a service
    # that do not expect the service to be fully configured (install, restore, destroy)
-   case "$1" in 
+   DCOMMAND="$1" ; shift
+   case "$DCOMMAND" in 
       clean)
          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
          exit 0
@@ -219,54 +222,45 @@ function processdRunnerCommands {
          
       update)
          # if no args then update dr itself.
-         if [ "$#" -eq 1 ]; then
-            updatedr
-            exit 0
-         fi
+         [ "$#" -gt 0 ] || { updatedr ; exit "$?" ; }
          # otherwise fall through - we want to update a service not dr.
          ;;
          
       checkimage)
-         [ "$#" -eq 2 ] || dieusage "drunner checkimage IMAGENAME"
-         IMAGENAME="$2"
+         [ "$#" -eq 1 ] || dieusage "drunner checkimage IMAGENAME"
+         IMAGENAME="$1" ; shfit
          validate-image
-         exit 0
+         exit "$?"
          ;;
                   
       install)
-         if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+         if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
             dieusage "drunner install IMAGENAME [SERVICENAME]"
          fi
 
-         IMAGENAME="$2"
-         if [ "$#" -eq 3 ]; then 
-            SERVICENAME="$3" 
-         else
-            SERVICENAME="${IMAGENAME##*/}"
-            SERVICENAME="${SERVICENAME%%:*}"
-         fi
+         IMAGENAME="$1" ; shift
+         SERVICENAME="${IMAGENAME##*/}"
+         SERVICENAME="${SERVICENAME%%:*}"
+         [ "$#" -eq 0 ] || { SERVICENAME="$1" ; shift ; }
 
          installservice
-         exit 0
+         exit "$?"
          ;;
 
       restore)
-         if [ "$#" -ne 3 ]; then
-            dieusage "[PASS=?] drunner restore BACKUPFILE SERVICENAME  "
-            exit 0
-         fi
-         SERVICENAME="$3"
-         restore "$2"
-         exit 0
+         [ "$#" -eq 2 ] || dieusage "[PASS=?] drunner restore BACKUPFILE SERVICENAME"
+         local BACKUPFILE="$1" ; shift
+         SERVICENAME="$1" ; shift
+         restore "$BACKUPFILE"
+         exit "$?"
          ;;
          
       status) 
-         [ "$#" -eq 2 ] || dieusage "drunner status SERVICENAME"
-         SERVICENAME="$2"
+         [ "$#" -eq 1 ] || dieusage "drunner status SERVICENAME"
+         SERVICENAME="$1" ; shift
          [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. If you need to recover, install it and any existing Docker volumes will be preserved."
          "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Validation failed!"
-         echo "${SERVICENAME} is installed and okay."
-         exit 0
+         die "${SERVICENAME} is installed and okay." 0
          ;;
          
       recover)
