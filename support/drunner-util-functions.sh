@@ -12,10 +12,12 @@ function errecho {
 # colourful way to die.
 function die {
    local DIEMSG="${1:-"Unexpected error and we died with no message."}"
-   local DIERVAL="${2:-1}"
-   [ "$DIERVAL" -ne 0 ] || { echo " ">&2 ; echo -e "$DIEMSG">&2 ; echo " ">&2 ; }
-   [ "$DIERVAL" -eq 0 ] || errecho "$DIEMSG"
-   exit $DIERVAL
+   errecho "$DIEMSG"
+   exit 1
+}
+function alldone {
+   echo " ">&2 ; echo -e "${1:-"Complete."}">&2 ; echo " ">&2 ; 
+   exit 0
 }
 
 #-----------------------------------------------------------------------------------------------------------------------------

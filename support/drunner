@@ -27,7 +27,7 @@ readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
 
 source "/etc/drunner/config.sh"
-[ -d ${ROOTPATH} ] || { echo "Installation broken. Please run drunner-install again.">&2 ; exit 1 ; }
+[ -d "${ROOTPATH}" ] || { echo "Installation broken. Please run drunner-install again.">&2 ; exit 1 ; }
 
 source "${ROOTPATH}/support/buildtime.sh"
 source "${ROOTPATH}/support/drunner-util-functions.sh"
@@ -161,38 +161,44 @@ function processServiceCommands {
    DCOMMAND="$1" ; shift
    case "$DCOMMAND" in
       update)
-         setServiceName "$@" ; shift
-         updateservice
+         setServiceName "$1" ; shift
+         updateservice || die "Update failed."
+         alldone "Update complete."
          ;;
                   
       backup)
          if [ "$#" -eq 2 ]; then
-            setServiceName "$@" ; shift
-            backup "$1"
+            setServiceName "$1" ; shift
+            backup "$1" || die "Backup failed."
+            alldone "Backup complete."
          else
             dieusage "[PASS=?] drunner backup SERVICENAME BACKUPFILE"
          fi
          ;;
          
       enter)
-         setServiceName "$@" ; shift
+         setServiceName "$1" ; shift
          SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
-         bash "${SCRIPTTORUN}" "enter" "$@"
+         bash "${SCRIPTTORUN}" "enter" "$@" || die "Failed."
+         alldone "Complete."
          ;;
          
       # servicecmd SERVICENAME COMMAND
       servicecmd)
-         setServiceName "$@" ; shift
+         [ $# -gt 0 ] || die "$DCOMMAND shouldn't be invoked manually."
+         setServiceName "$1" ; shift
          local RESERVEDWORDS=("install" "backupstart" "backupend" "backup" "restore" "update" "enter" "uninstall" "obliterate")
          if [ "$#" -eq 0 ] || [ "$1" = "help" ]; then
             showservicehelp
+            die "$DCOMMAND $SERVICENAME requires a subcommand."
          elif elementIn "$1" "${RESERVEDWORDS[@]}"; then 
             die "$1 is a reserved word. Try ${CODE_S}drunner ${1} ${SERVICENAME}${CODE_E} instead."
          else
             SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
             SUBCOMMAND="$1" ; shift
             [ -e "${SCRIPTTORUN}" ] || die "${SERVICENAME} is broken. Try ${CODE_S}drunner recover ${SERVICENAME}${CODE_E}"
-            "${SCRIPTTORUN}" "$SUBCOMMAND" "$@"
+            "${SCRIPTTORUN}" "$SUBCOMMAND" "$@" || die "$SUBCOMMAND failed."
+            alldone "$SUBCOMMAND complete."
          fi
          ;;
 
@@ -212,25 +218,25 @@ function processdRunnerCommands {
    case "$DCOMMAND" in 
       clean)
          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc
-         die "Clean completed." 0
+         alldone "Clean completed."
          ;;
          
       list)
-         showservices
+         showservices || die "Failed to show services."
          exit 0
          ;;
          
       update)
          # if no args then update dr itself.
-         [ "$#" -gt 0 ] || { updatedr ; exit "$?" ; }
+         [ "$#" -gt 0 ] || { updatedr || die "Failed to update dRunner." ; alldone "Update complete." ; }
          # otherwise fall through - we want to update a service not dr.
          ;;
          
       checkimage)
          [ "$#" -eq 1 ] || dieusage "drunner checkimage IMAGENAME"
-         IMAGENAME="$1" ; shfit
-         validate-image
-         exit "$?"
+         IMAGENAME="$1" ; shift
+         validate-image || die "Not valid."
+         alldone "Valid."
          ;;
                   
       install)
@@ -243,16 +249,16 @@ function processdRunnerCommands {
          SERVICENAME="${SERVICENAME%%:*}"
          [ "$#" -eq 0 ] || { SERVICENAME="$1" ; shift ; }
 
-         installservice
-         exit "$?"
+         installservice || die "Installation failed."
+         alldone "Installation succeeded."
          ;;
 
       restore)
          [ "$#" -eq 2 ] || dieusage "[PASS=?] drunner restore BACKUPFILE SERVICENAME"
          local BACKUPFILE="$1" ; shift
          SERVICENAME="$1" ; shift
-         restore "$BACKUPFILE"
-         exit "$?"
+         restore "$BACKUPFILE" || die "Restore failed."
+         alldone "Restore succeeded."
          ;;
          
       status) 
@@ -260,7 +266,7 @@ function processdRunnerCommands {
          SERVICENAME="$1" ; shift
          [ -e "${ROOTPATH}/services/${SERVICENAME}" ] || die "${SERVICENAME} is not installed. If you need to recover, install it and any existing Docker volumes will be preserved."
          "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Validation failed!"
-         die "${SERVICENAME} is installed and okay." 0
+         alldone "${SERVICENAME} is installed and okay."
          ;;
          
       recover)
@@ -268,31 +274,29 @@ function processdRunnerCommands {
             dieusage "drunner recover SERVICENAME [IMAGENAME]"
          fi
          SERVICENAME="$1" ; shift
-         uninstallService
+         uninstallService || die "Couldn't uninstall old service"
 
          IMAGENAME=""
          loadServiceSilent
          [ "$#" -eq 0 ] || { IMAGENAME="$1" ; shift ; }
          [ -n "$IMAGENAME" ] || die "${SERVICENAME} does not have an existing image definition. You need to use ${CODE_S}drunner recover SERVICENAME IMAGENAME${CODE_E}"
          
-         installservice       
-         exit 0
+         installservice || die "Recover failed."      
+         alldone "Recover complete."
          ;;         
          
       uninstall)
-         [ "$#" -eq 1 ] || dieusage "drunner uninstall SERVICENAME"
+         [ $# -eq 1 ] || dieusage "drunner uninstall SERVICENAME"
          SERVICENAME="$1"
          uninstallService || die "${SERVICENAME} uninstalled, but there were errors."
-         echo "${SERVICENAME} uninstalled. Data retained. Install again to recover."
-         exit 0         
+         alldone "${SERVICENAME} uninstalled. Data retained. Install again to recover."
          ;;
 
       obliterate)
          [ "$#" -eq 1 ] || dieusage "drunner obliterate SERVICENAME"
          SERVICENAME="$1"
          obliterateService || die "${SERVICENAME} obliterated, but there were errors."
-         echo "${SERVICENAME} and its containers obliterated - all data destroyed."
-         exit 0
+         alldone "${SERVICENAME} and its containers obliterated - all data destroyed."
          ;;        
    esac  
 }
@@ -308,11 +312,7 @@ function processdRunnerCommands {
 
 function main {                                
 
-   if [ "$#" -eq 0 ]; then 
-      showusage
-      showservices
-      exit 0
-   fi
+   [ "$#" -gt 0 ] || { showusage ; showservices ; exit 0 ;}
    
    # Process (clean, list, update, install, restore, destroy)
    # These ones don't require a valid service.
