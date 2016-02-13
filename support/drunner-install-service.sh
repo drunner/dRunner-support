@@ -65,7 +65,7 @@ function recreateservice {
       exit 1
    fi  
    
-   local DATESTAMP="$(TZ=Pacific/Auckland date -u +"%a, %d %b %Y %X %z")" 
+   local DATESTAMP="$(TZ=Pacific/Auckland date +"%a, %d %b %Y %X")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
 
    # loadServiceSilent gets the VOLUMES and related vars. We haven't finished creating it, so go silent!

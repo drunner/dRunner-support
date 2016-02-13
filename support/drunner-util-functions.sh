@@ -22,10 +22,10 @@ function alldone {
 
 #-----------------------------------------------------------------------------------------------------------------------------
 
-# Global constants for pretty code.
-# require  echo -e 
-readonly CODE_S="\e[32m"
-readonly CODE_E="\e[0m"
+# Formatting for comamnds - standardised.
+readonly ecode=$(printf "\e") 
+readonly CODE_S="$ecode[32m"
+readonly CODE_E="$ecode[0m"
 
 #-----------------------------------------------------------------------------------------------------------------------------
 

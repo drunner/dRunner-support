@@ -3,6 +3,11 @@
 # --- some useful utility functions
 # --- generally should be okay if used with 'set -e'.
 
+# Formatting for comamnds - standardised.
+[ -v ECODE ] || readonly ECODE=$(printf "\e") 
+[ -v CODE_S ] || readonly CODE_S="$ECODE[32m"
+[ -v CODE_E ] || readonly CODE_E="$ECODE[0m"
+
 #------------------------------------------------------------------------------------
 # die MSG [EXITCODE] - show the message (red) and exit exitcode.
 

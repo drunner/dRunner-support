@@ -13,8 +13,11 @@ set -e
 # check that drunner itself is installed okay.
  
                                                                       
-readonly CODE_S="\e[32m"
-readonly CODE_E="\e[0m"
+# Formatting for comamnds - standardised.
+readonly ecode=$(printf "\e") 
+readonly CODE_S="$ecode[32m"
+readonly CODE_E="$ecode[0m"
+
 
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
