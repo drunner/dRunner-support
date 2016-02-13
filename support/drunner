@@ -68,10 +68,12 @@ NAME
    drunner - docker Runner
 
 VERSION
-   drunner:         ${DRUNNERINSTALLTIME}
+   drunner-install: ${DRUNNERINSTALLTIME}
+                    ${DRUNNERINSTALLURL}
+
    drunner-support: ${SUPPORTBUILDTIME}
-   drunner-install: ${DRUNNERINSTALLURL}
-   
+                    ${SUPPORTIMAGE}
+                       
 SYNOPSIS
    drunner clean
    drunner list

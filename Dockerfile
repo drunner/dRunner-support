@@ -15,6 +15,9 @@ RUN echo "SUPPORTBUILDTIME=\"$(TZ=Pacific/Auckland date)\"" > /support/buildtime
       chmod a+rx -R /usr/local/bin  &&  \
       chmod a-w -R /support
 
-# expose volume
-VOLUME ["/config"]
+# don't run as root.
+RUN groupadd -g 22055 drunnersupport
+RUN adduser --disabled-password --gecos '' -u 22055 --gid 22055 drunnersupport
+RUN chown -R root:root /usr/local/bin /support && chmod 0555 -R /usr/local/bin /support
 
+USER drunnersupport
