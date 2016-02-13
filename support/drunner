@@ -110,7 +110,7 @@ EOF
 # updatedr - udpates docker runner.
 function updatedr {
    # use the container to get the latest dr-install script.
-   local TEMPDIR="$(mktemp -d)"
+   local TEMPDIR="$(mktempd_drunner)"
    echo "Downloading from $DRUNNERINSTALLURL"
    docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "${SUPPORTIMAGE}" bash -c "wget --no-cache -nv -O /tempdir/drunner-install ${DRUNNERINSTALLURL}" >/dev/null
    local RVAL="$?"

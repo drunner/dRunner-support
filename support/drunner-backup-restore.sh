@@ -13,7 +13,7 @@ function backup {
    # only backup valid services. (otherwise recover then backup!)
    "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Use ${CODE_S}drunner recover ${SERVICENAME}${CODE_E} before backing up."
    
-   local TEMPROOT="$(mktemp -d)"
+   local TEMPROOT="$(mktempd_drunner)"
    
    ( # SUBSHELL so we can tidy up easily if it goes wrong.
       # bail if any command returns an error!
@@ -74,7 +74,7 @@ function restore {
    if [ ! -e "$BACKUPFILE" ]; then die "$BACKUPFILE doesn't exist. Aborting." ; fi
    if [ -e "${ROOTPATH}/services/${SERVICENAME}" ]; then die "$SERVICENAME exists - destroy it before restoring from backup." ; fi
    
-   local TEMPROOT="$(mktemp -d)"
+   local TEMPROOT="$(mktempd_drunner)"
    
    ( # SUBSHELL so we can tidy up easily if it goes wrong.
       # bail if any command returns an error!

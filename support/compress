@@ -8,19 +8,10 @@ set -o nounset
 # ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║
 #  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
                                                                                                                                                    
-# die MESSAGE 
-function die {
-   if [ "$#" -eq 1 ]; then
-      echo "$1" <&2
-   else
-      echo "Unexpected error. Exiting."<&2
-   fi
-   exit 1
-}
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
+source "${ROOTPATH}/support/drunner-util-functions.sh"
 
-function volexists {
-  docker volume ls | grep "$1" > /dev/null
-}
 
 #------------------------------------------------------------------------------------
 # PASS=? compress SOURCEPATH/VOLUME ARCHIVEFOLDER ARCHIVENAME
@@ -43,7 +34,7 @@ if [ $? -ne 0 ]; then die "compress: Couldn't find destination path ${2}." ; fi
 
 ARCHIVENAME="$3"
 
-TEMPDIR="$(mktemp -d)"
+TEMPDIR="$(mktempd_drunner)"
 
 # ensure PASS exists.
 [ -v PASS ] || PASS=""

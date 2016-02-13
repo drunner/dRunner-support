@@ -205,7 +205,21 @@ function obliterateService {
    return "$ERRORFREE"
 }
 
+#------------------------------------------------------------------------------------
+
+# check if a docker volume exists.
+function volexists {
+  docker volume ls | grep "$1" > /dev/null
+}
 
 
 #------------------------------------------------------------------------------------
 
+# mktempd_drunner
+# use:   TEMPDIR="$(mktempd_drunner)"
+function mktempd_drunner {
+   [ -v ROOTPATH ] || die "ROOTPATH not set."
+   local TEMPDIR="${ROOTPATH}/temp/install-support"
+   [ -d "${TEMPDIR}" ] || mkdir -p "${TEMPDIR}" || die "Couldn't create $TEMPDIR"
+   mktemp -d -p ${TEMPDIR}
+}

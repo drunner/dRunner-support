@@ -8,19 +8,10 @@ set -o nounset
 # ██████╔╝███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║
 # ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
 
-# die MESSAGE 
-function die {
-   if [ "$#" -eq 1 ]; then
-      echo "$1" <&2
-   else
-      echo "Unexpected error. Exiting."<&2
-   fi
-   exit 1
-}
 
-function volexists {
-   docker volume ls | grep "$1" > /dev/null
-}
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
+source "${ROOTPATH}/support/drunner-util-functions.sh"
 
 #------------------------------------------------------------------------------------
 # PASS=? decompress DESTPATH/VOLUME ARCHIVEFOLDER ARCHIVENAME
