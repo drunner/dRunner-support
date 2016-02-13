@@ -31,7 +31,7 @@ for CFILE in "${REQDFILES[@]}"; do
    fi
 done
 
-source /drunner/servicecfg.sh
+source /drunner/servicecfg.sh || die "Couldn't load servicecfg.sh"
 
 exit 0
 

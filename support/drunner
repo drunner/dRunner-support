@@ -25,16 +25,19 @@ set -o nounset
 
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
+ROOTPATHX=$(realpath "$MYDIR/../" | tr -d '\r\n')
 
-source "/etc/drunner/config.sh"
-[ -d "${ROOTPATH}" ] || { echo "Installation broken. Please run drunner-install again.">&2 ; exit 1 ; }
+[ -e "${ROOTPATHX}/config.sh" ] || { echo "Installation broken. Please run drunner-install.">&2 ; exit 1 ; }
+source "${ROOTPATHX}/config.sh"
+[ -d "${ROOTPATH}" ] || { echo "Installation broken. Please run drunner-install.">&2 ; exit 1 ; }
+[ "${ROOTPATH}" = ${ROOTPATHX} ] || { echo "Installation broken. ROOTPATH in config.sh incorrect. Please run drunner-install.">&2 ; exit 1 ;}
 
 source "${ROOTPATH}/support/buildtime.sh"
 source "${ROOTPATH}/support/drunner-util-functions.sh"
 source "${ROOTPATH}/support/drunner-install-service.sh"
 source "${ROOTPATH}/support/drunner-backup-restore.sh"
 
-if [ "$EUID" -ne 0 ]; then echo "Please run as root" ; exit 1 ; fi
+if [ "$EUID" -eq 0 ]; then echo "Please do not run as root" ; exit 1 ; fi
 if ! command_exists docker ; then die "Requires docker to be installed." ; fi
 if [ "$(uname -rv | grep -c Debian)" -eq 0 ]; then die "Built for Debian only." ; fi
 

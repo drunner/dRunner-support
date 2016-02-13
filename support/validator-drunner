@@ -16,6 +16,9 @@ set -e
 readonly CODE_S="\e[32m"
 readonly CODE_E="\e[0m"
 
+readonly MYDIR=$( dirname "$(readlink -f "$0")" )
+ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
+
 # die MESSAGE 
 function die {
    echo -e " ">&2
@@ -30,10 +33,11 @@ function die {
 }
 
 # Validate drunner is installed okay
-[ ! -e "/etc/drunner/drunner.cfg" ] || die "You have an old installation of drunner. Try moving drunner.cfg to config.sh in /etc/drunner, then drunner update"
-[ -e "/etc/drunner/config.sh" ] || die "/etc/drunner/config.sh missing."
+[ ! -e "/etc/drunner/config.sh" ] || die "You have an old installation of drunner. Remove /etc/drunner and /usr/local/bin/drunner."
+[ ! -e "/usr/local/bin/drunner" ] || die "You have an old installation of drunner. Remove /etc/drunner and /usr/local/bin/drunner."
+[ -e "${ROOTPATH}/config.sh" ] || die "/etc/drunner/config.sh missing."
 
-source "/etc/drunner/config.sh"
+source "${ROOTPATH}/config.sh"
 
 [ -v ROOTPATH ]            || die "config.sh doesn't set ROOTPATH."
 [ -v PULLONUPDATE ]        || die "config.sh doesn't set PULLONUPDATE."
