@@ -58,7 +58,7 @@ EOF
       mv "${TEMPROOT}/backupmain.tar.7z" "$BACKUPFILE"
    )
    RVAL="$?" 
-   rm -r "${TEMPROOT}"
+   rm -rf "${TEMPROOT}"
    [ $RVAL -eq 0 ] || die "Backup failed. Temp files have been removed."
    
    echo " ">&2
