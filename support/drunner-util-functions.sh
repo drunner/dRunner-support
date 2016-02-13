@@ -8,7 +8,7 @@ function errecho {
    ERRORFREE=1
 }
 
-# die MESSAGE 
+# die MESSAGE
 # colourful way to die.
 function die {
    local DIEMSG="${1:-"Unexpected error and we died with no message."}"
@@ -16,14 +16,14 @@ function die {
    exit 1
 }
 function alldone {
-   echo " ">&2 ; echo -e "${1:-"Complete."}">&2 ; echo " ">&2 ; 
+   echo " ">&2 ; echo -e "${1:-"Complete."}">&2 ; echo " ">&2 ;
    exit 0
 }
 
 #-----------------------------------------------------------------------------------------------------------------------------
 
 # Formatting for comamnds - standardised.
-readonly ecode=$(printf "\e") 
+readonly ecode=$(printf "\e")
 readonly CODE_S="$ecode[32m"
 readonly CODE_E="$ecode[0m"
 
@@ -81,7 +81,7 @@ function validate-image  {
    if [ ! -e "${ROOTPATH}/support/run_on_service/validator-image" ]; then
       die "Missing dRunner file: ${ROOTPATH}/support/run_on_service/validator-image"
    fi
-   
+
    # need to get validator-image into the container and run it with the containers UID (non-root)
    docker run --rm -v "${ROOTPATH}/support/run_on_service:/support" "${IMAGENAME}" "/support/validator-image"
    [ "$?" -eq 0 ] || die "${IMAGENAME} is not dRunner compatible."
@@ -115,13 +115,13 @@ function silentSource {
 
 # loadServiceSilent
 # Requires SERVICENAME and ROOTPATH, but copes with anything else.
-function loadServiceSilent {   
+function loadServiceSilent {
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't load service because SERVICENAME is not set." ; fi
    if [ ! -v ROOTPATH ] || [ ! -d "$ROOTPATH" ]; then die "Can't load service because ROOTPATH doesn't exist." ; fi
 
    silentSource "${ROOTPATH}/services/${SERVICENAME}/drunner/servicecfg.sh"
    silentSource "${ROOTPATH}/services/${SERVICENAME}/imagename.sh"
-   
+
    if [ -v VOLUMES ]; then
       for i in "${!VOLUMES[@]}"; do
          DOCKERVOLS[$((i))]="drunner-${SERVICENAME}-${VOLUMES[i]//[![:alnum:]]/}"
@@ -138,7 +138,7 @@ function loadServiceSilent {
 function validateLoadService {
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "validateLoadService - SERVICENAME not defined." ; fi
    "${ROOTPATH}/support/validator-service" "$SERVICENAME" || exit 1
-   
+
    loadServiceSilent
 }
 
@@ -149,15 +149,15 @@ function validateLoadService {
 function destroyService_low {
    # call destroy in service.
    if [ ! -v SERVICENAME ] || [ -z "$SERVICENAME" ]; then die "Can't destroy because SERVICENAME is not set." ; fi
-   
+
    # attempt to read the service info, if present.
    loadServiceSilent
-      
+
    # remove launch script
-   if [ -e "/home/$USER/bin/${SERVICENAME}" ]; then 
+   if [ -e "/home/$USER/bin/${SERVICENAME}" ]; then
       rm -f "/home/$USER/bin/${SERVICENAME}" || errecho "Couldn't remove launch script: /home/$USER/bin/${SERVICENAME}"
    fi
-   
+
    # delete service directoy.
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
       rm -rf "${ROOTPATH}/services/${SERVICENAME}" || errecho "Couldn't remove service tree: ${ROOTPATH}/services/${SERVICENAME}"
@@ -169,9 +169,9 @@ function destroyService_low {
 # uninstall the service.
 function uninstallService {
    ERRORFREE=0
-   
+
    # important to call this first (e.g. to stop services)
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" uninstall || errecho "Calling servicerunner uninstall failed."
    fi
 
@@ -184,24 +184,24 @@ function uninstallService {
 
 
 # destroy the Docker service, including all data and configuration volumes
-function obliterateService { 
+function obliterateService {
    ERRORFREE=0
-   
+
    # important to call this first (e.g. to stop services)
-   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then 
+   if [ -e "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" ]; then
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" obliterate || errecho "Calling servicerunner obliterate failed."
    fi
 
    destroyService_low
-       
+
    # remove volume containers.
    if [ -v DOCKERVOLS ]; then
-      for VOLNAME in "${DOCKERVOLS[@]}"; do      
+      for VOLNAME in "${DOCKERVOLS[@]}"; do
          docker volume rm "$VOLNAME" >/dev/null
          echo "Destroyed docker volume ${VOLNAME}."
       done
    fi
-   
+
    return "$ERRORFREE"
 }
 
@@ -221,7 +221,7 @@ function mktempd_drunner {
    [ -v ROOTPATH ] || die "ROOTPATH not set."
    local TEMPDIR="${ROOTPATH}/temp/install-support"
    [ -d "${TEMPDIR}" ] || mkdir -p "${TEMPDIR}" || die "Couldn't create $TEMPDIR"
-   local TEMPDIR2=$(mktemp -d -p ${TEMPDIR})
+   local TEMPDIR2=$(mktemp -d -p "${TEMPDIR}")
    chmod 0777 "$TEMPDIR2" || die "Couldn't change permission on $TEMPDIR2."
    echo -n "$TEMPDIR2"
 }
@@ -231,21 +231,22 @@ function mktempd_drunner {
 
 # chownpath
 # use:   chownpath PATH CMD   with path mapped to /s
-# e.g.:  chownpath "$ROOTPATH/support" "chown -R $EUID:${GROUPS[0]} /s && chmod -R 0500 /s" 
+# e.g.:  chownpath "$ROOTPATH/support" "chown -R $EUID:${GROUPS[0]} /s && chmod -R 0500 /s"
 function chownpath {
    [ $# -eq 2 ] || die "chownpath called with incorrect number of arguments."
    local DPATH="$1"
-   [ -d $DPATH ] || die "chownpath called with non-existant path $DPATH"
+   [ -d "$DPATH" ] || die "chownpath called with non-existant path $DPATH"
    # set ownership and permissions for those support files (don't rely on what's in the container).
    docker run --rm -v "$DPATH:/s" drunner/install-rootutils bash -c "$2" >/dev/null || die "chownpath command failed: $2"
 }
 
 #------------------------------------------------------------------------------------
 
-function imageNameisDev {
-   [ -v IMAGENAME ] || die "IMAGENAME not set in imageNameisDev."
-   [ -n "$IMAGENAME" ] || die "IMAGENAME is empty string in imageNameisDev."
-   
-   [[ $IMAGENAME == *":dev" ]]
-}
+# imageNameisDev
+# user:   if imageIsDev IMAGENAME ; then ....
+function imageIsDev {
+   local IMAGEN="${1:-""}"
+   [ -n "$IMAGEN" ] || die "IMAGENAME is empty string in imageNameisDev."
 
+   [[ $IMAGEN == *":dev" ]]
+}

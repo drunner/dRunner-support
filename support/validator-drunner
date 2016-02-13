@@ -2,19 +2,19 @@
 set -o nounset
 set -e
 
-# ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗ 
+# ██╗   ██╗ █████╗ ██╗     ██╗██████╗  █████╗ ████████╗ ██████╗ ██████╗
 # ██║   ██║██╔══██╗██║     ██║██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗
 # ██║   ██║███████║██║     ██║██║  ██║███████║   ██║   ██║   ██║██████╔╝
 # ╚██╗ ██╔╝██╔══██║██║     ██║██║  ██║██╔══██║   ██║   ██║   ██║██╔══██╗
 #  ╚████╔╝ ██║  ██║███████╗██║██████╔╝██║  ██║   ██║   ╚██████╔╝██║  ██║
 #   ╚═══╝  ╚═╝  ╚═╝╚══════╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
- 
- 
+
+
 # check that drunner itself is installed okay.
- 
-                                                                      
+
+
 # Formatting for comamnds - standardised.
-readonly ecode=$(printf "\e") 
+readonly ecode=$(printf "\e")
 readonly CODE_S="$ecode[32m"
 readonly CODE_E="$ecode[0m"
 
@@ -22,7 +22,7 @@ readonly CODE_E="$ecode[0m"
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
 
-# die MESSAGE 
+# die MESSAGE
 function die {
    echo -e " ">&2
    echo -e "\e[31m\e[1mInstallation broken. ${1}\e[0m">&2
@@ -48,7 +48,6 @@ function die {
 
 source "${ROOTPATH}/config.sh"
 
-[ -v PULLONUPDATE ]        || die "config.sh doesn't set PULLONUPDATE."
 [ -v SUPPORTIMAGE ]        || die "config.sh doesn't set SUPPORTIMAGE."
 [ -v DRUNNERINSTALLURL ]   || die "config.sh doesn't set DRUNNERINSTALLURL."
 [ -v DRUNNERINSTALLTIME ]  || die "config.sh doesn't set DRUNNERINSTALLTIME."
@@ -57,6 +56,6 @@ source "${ROOTPATH}/config.sh"
 
 source "${ROOTPATH}/support/buildtime.sh"
 
-[ -v SUPPORTBUILDTIME ]    || die "buildtime.sh doesn't set SUPPORTBUILDTIME." 
+[ -v SUPPORTBUILDTIME ]    || die "buildtime.sh doesn't set SUPPORTBUILDTIME."
 
 exit 0

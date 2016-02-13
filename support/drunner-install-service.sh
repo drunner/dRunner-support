@@ -23,22 +23,22 @@ function install_createVolumes {
    # we need the user id for the account that the image uses.
    local USERID=$(getUSERID "$IMAGENAME")
    if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
-   
+
    if [ -v VOLUMES ]; then
-      for i in "${!DOCKERVOLS[@]}"; do      
+      for i in "${!DOCKERVOLS[@]}"; do
          VOLNAME="${DOCKERVOLS[i]}"
          VOLPATH="${VOLUMES[i]}"
 
-         if volexists "$VOLNAME" ; then 
+         if volexists "$VOLNAME" ; then
             echo "A docker volume exists for: $VOLNAME. Reusing it.";
          else
             docker volume create --name="$DNAME" >/dev/null
             # set permissions on config volume
             docker run --name="$DNAME" -v "${VOLNAME}:${VOLPATH}" "drunner/baseimage-alpine" \
                /bin/bash -c "chown ${USERID}:root ${VOLPATH} && date >> ${VOLPATH}/install_date"
-            docker rm "$DNAME" >/dev/null 
+            docker rm "$DNAME" >/dev/null
          fi
-      done     
+      done
   fi
 }
 
@@ -47,40 +47,40 @@ function install_createVolumes {
 
 # recreateservice
 # called by both install and SERVICE update.
-function recreateservice {   
+function recreateservice {
    # the directory that the container will update.
    [ -v SERVICENAME ] || die "SERVICENAME undefined."
    [ ! -d "${ROOTPATH}/services/${SERVICENAME}" ] || rm -rf "${ROOTPATH}/services/${SERVICENAME}" || die "Could not remove old ${SERVICENAME}."
    mkdir -p "${ROOTPATH}/services/${SERVICENAME}/drunner"
-   
+
    # allow the container to write into this folder.
    chmod 0777 "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
 
    # ensure we've got the latest master image for the dService.
-   [ "$PULLONUPDATE" -eq 0 ] || docker pull "${IMAGENAME}" || die "Unable to pull required Docker image ${IMAGENAME}."
-   
+   imageIsDev "$IMAGENAME" || docker pull "${IMAGENAME}" || die "Unable to pull required Docker image ${IMAGENAME}."
+
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
-   docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"                             
-   if [ $? -ne 0 ]; then 
-      echo "Failed to copy files.">&2 
+   docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"
+   if [ $? -ne 0 ]; then
+      echo "Failed to copy files.">&2
       echo "You will need to reinstall the service.">&2
       rm -rf "${SERVICEPATH}"
       exit 1
-   fi  
-   
-   local DATESTAMP="$(TZ=Pacific/Auckland date +"%a, %d %b %Y %X")" 
-   local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
+   fi
+
+   local DATESTAMP="$(TZ=Pacific/Auckland date +"%a, %d %b %Y %X")"
+   local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}')
 
    # loadServiceSilent gets the VOLUMES and related vars. We haven't finished creating it, so can't validate (go silent).
    loadServiceSilent
-   
+
    # now we can pull those extra volumes. EXTRACONTAINERS is an array, so only gets set if non-empty
-   if [ "$PULLONUPDATE" -eq 1 ] && [ -v EXTRACONTAINERS ]; then
+   if [ -v EXTRACONTAINERS ]; then
       for CONTNAME in "${EXTRACONTAINERS[@]}"; do
-         docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}."
+         imageIsDev "$CONTNAME" || docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}."
       done
    fi
-   
+
    # convert arrays to a string format suitable for later source'ing.
    array2string "${DOCKERVOLS[@]:-}" ;       STR_DOCKERVOLS="$ARRAYSTR"
    array2string "${DOCKEROPTS[@]:-}" ;       STR_DOCKEROPTS="$ARRAYSTR"
@@ -127,12 +127,12 @@ function updateservice {
    local SERVICERUNNER="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
 
    "$SERVICERUNNER" updatestart || die "Update failed (${SERVICENAME}'s updatestart failed)."
-   recreateservice   
+   recreateservice
    "$SERVICERUNNER" updateend || die "Update failed (${SERVICENAME}'s updateend failed)."
-   
+
    # validate
    "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Update failed."
-   
+
    echo "Updated ${SERVICENAME} from ${IMAGENAME}.">&2
    exit 0
 }
@@ -142,7 +142,7 @@ function updateservice {
 
 
 # installservice
-function installservice {   
+function installservice {
    if [ -z "$IMAGENAME" ]; then die "install requires IMAGENAME." ; fi
    if [ -z "$SERVICENAME" ]; then die "install requires SERVICENAME." ; fi
 
@@ -152,17 +152,17 @@ function installservice {
       exit 1
    fi
 
-   (      
+   (
       set -e
-            
-      validate-image 
+
+      validate-image
       recreateservice
       install_createlaunchscript
       install_createVolumes
-         
-      # Finally run the install script in the service.         
+
+      # Finally run the install script in the service.
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" install
-      
+
       # validate
       "${ROOTPATH}/support/validator-service" "$SERVICENAME" "NUKEOK"
    )
@@ -170,11 +170,10 @@ function installservice {
       uninstallService
       die "Installation failed. ${CODE_E} System returned to clean state but all volumes preserved."
    fi
-    
+
    # TODO: If we had errors then destroy everything!
    echo "Installation of service ${SERVICENAME} successful.">&2
    exit 0
 }
 
 #------------------------------------------------------------------------------------
-
