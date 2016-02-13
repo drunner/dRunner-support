@@ -12,7 +12,6 @@ function die {
    exit "$EXITCODE"
 }
 
-
 #------------------------------------------------------------------------------------
 # See if a container is exists. Return value of docker inspect is correct (0 if running)
 # https://gist.github.com/ekristen/11254304

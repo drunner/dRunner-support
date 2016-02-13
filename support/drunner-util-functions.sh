@@ -154,13 +154,13 @@ function destroyService_low {
    loadServiceSilent
       
    # remove launch script
-   if [ -e "/usr/local/bin/${SERVICENAME}" ]; then 
-      rm "/usr/local/bin/${SERVICENAME}" || errecho "Couldn't remove launch script: /usr/local/bin/${SERVICENAME}"
+   if [ -e "/home/$USER/bin/${SERVICENAME}" ]; then 
+      rm -f "/home/$USER/bin/${SERVICENAME}" || errecho "Couldn't remove launch script: /home/$USER/bin/${SERVICENAME}"
    fi
    
    # delete service directoy.
    if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then
-      rm -r "${ROOTPATH}/services/${SERVICENAME}" || errecho "Couldn't remove service tree: ${ROOTPATH}/services/${SERVICENAME}"
+      rm -rf "${ROOTPATH}/services/${SERVICENAME}" || errecho "Couldn't remove service tree: ${ROOTPATH}/services/${SERVICENAME}"
    fi
 }
 

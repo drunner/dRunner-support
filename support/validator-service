@@ -8,7 +8,7 @@ set -e
 # ╚██╗ ██╔╝██╔══██║██║     ██║██║  ██║██╔══██║   ██║   ██║   ██║██╔══██╗
 #  ╚████╔╝ ██║  ██║███████╗██║██████╔╝██║  ██║   ██║   ╚██████╔╝██║  ██║
 #   ╚═══╝  ╚═╝  ╚═╝╚══════╝╚═╝╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
-                                                                      
+                                                                                         
 readonly CODE_S="\e[32m"
 readonly CODE_E="\e[0m"
 
@@ -32,8 +32,9 @@ function die {
 
 readonly MYDIR=$( dirname "$(readlink -f "$0")" )
 if ! "${MYDIR}/validator-drunner" ; then exit 1 ; fi
+ROOTPATH=$(realpath "$MYDIR/../" | tr -d '\r\n')
 
-source "/etc/drunner/config.sh"
+source "${ROOTPATH}/config.sh"
 
 # Validate service is installed okay
 SERVICENAME=${1:-""}

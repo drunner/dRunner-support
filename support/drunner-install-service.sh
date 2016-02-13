@@ -4,7 +4,7 @@
 
 # install_createlaunchscript
 function install_createlaunchscript {
-   local SCRIPTPATH="/usr/local/bin/${SERVICENAME}"
+   local SCRIPTPATH="/home/${USER}/bin/${SERVICENAME}"
    cat <<EOF >"$SCRIPTPATH"
 #!/bin/bash
 drunner servicecmd ${SERVICENAME} "\$@"
@@ -53,19 +53,19 @@ function recreateservice {
    if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
 
    # allow the container to write into this folder.
-   chown "${USERID}" "${ROOTPATH}/services/${SERVICENAME}/drunner"
+   chmod a+rwx "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
+   #chown "${USERID}" "${ROOTPATH}/services/${SERVICENAME}/drunner"
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
    docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"                             
    if [ $? -ne 0 ]; then 
       echo "Failed to copy files.">&2 
       echo "You will need to reinstall the service.">&2
-      rm -r "${SERVICEPATH}"
+      rm -rf "${SERVICEPATH}"
       exit 1
    fi  
    # tighten up permissions
-   chown -R root:root "${ROOTPATH}/services/${SERVICENAME}/drunner"
-   chmod -R 0500 "${ROOTPATH}/services/${SERVICENAME}/drunner"
+   docker run --rm -v "${ROOTPATH}/services/${SERVICENAME}:/s" drunner/baseimage-alpine bash -c "chown -R $EUID:${GROUPS[0]} /s ; chmod -R 0700 /s" || die "Couldn't change permissions for ${ROOTPATH}/services/${SERVICENAME}" 
    
    local DATESTAMP="$(TZ=Pacific/Auckland date -u +"%a, %d %b %Y %X %z")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
