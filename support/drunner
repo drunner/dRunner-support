@@ -117,22 +117,26 @@ EOF
 
 # updatedr - udpates dRunner.
 function updatedr {
-   # use the container to get the latest dr-install script.
+   # use the container to get the latest dr-install script
    local TEMPDIR="$(mktempd_drunner)"
-   echo "Downloading from $DRUNNERINSTALLURL"
-   docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "${SUPPORTIMAGE}" bash -c "wget --no-cache -nv -O /tempdir/drunner-install ${DRUNNERINSTALLURL}" >/dev/null
-   local RVAL="$?"
-   docker rm "drunner-downloadfile" >/dev/null 2>&1
+   ( # subshell so we can be sure we remove the temp folder.
+      echo "Downloading from $DRUNNERINSTALLURL"
+      docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "${SUPPORTIMAGE}" \
+         bash -c "wget --no-cache -nv -O /tempdir/drunner-install ${DRUNNERINSTALLURL}" >/dev/null
+      local RVAL="$?"
+      docker rm "drunner-downloadfile" >/dev/null 2>&1
 
-   if [ "$RVAL" -ne 0 ]; then die "Unable to get drunner-install.">&2 ; fi
-   if [ ! -e "${TEMPDIR}/drunner-install" ]; then die "drunner-install mysteriously missing.">&2 ; fi
+      [ "$RVAL" -eq 0 ] || die "Unable to get drunner-install."
+      [ -e "${TEMPDIR}/drunner-install" ] || die "drunner-install mysteriously missing."
+
+      # run it to update the installation.
+      bash "${TEMPDIR}/drunner-install" "$ROOTPATH" || die "dRunner update failed (drunner-install script failed)"
+   )
+   local RVAL=$? 
    
-   # run it to update the installation.
-   bash "${TEMPDIR}/drunner-install"
+   # tidy up and exit (it's not safe to continue with the old script after updating dRunner like this)
    rm -rf "${TEMPDIR}"
-   
-   # not safe to continue.
-   exit 0
+   exit "$RVAL"
 }
 
 #------------------------------------------------------------------------------------
