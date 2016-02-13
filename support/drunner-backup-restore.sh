@@ -38,7 +38,7 @@ EOF
       # important this is called before backing up any volume containers, as
       # it might put stuff in them.
       getUSERID "$IMAGENAME"
-      chown "${USERID}" "${TEMPC}"
+      chown "${USERID}" "${TEMPC}" || die "Couldn't change ownership to $USERID for ${TEMPC}."
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
                   
       # back up our volume containers

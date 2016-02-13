@@ -30,29 +30,34 @@ function die {
    echo -e "Download the latest drunner-install and run it.">&2
    echo -e "Your services and data will be preserved.">&2
    echo -e " ">&2
-   echo -e "${CODE_S}https://raw.github.com/j842/dockerrunner/master/drunner-install${CODE_E}">&2
+   echo -e "${CODE_S}wget https://raw.githubusercontent.com/drunner/install/master/drunner-install${CODE_E}">&2
+   echo -e "${CODE_S}drunner-install $ROOTPATH${CODE_E}">&2
    echo -e " ">&2
    exit 1
 }
 
 # Validate drunner is installed okay
+[ -d "$ROOTPATH" ]                || die "$ROOTPATH doesn't exist."
+[ -d "$ROOTPATH/temp" ]           || die "Temp directory is missing."
+[ -d "$ROOTPATH/services" ]       || die "Services directory is missing."
+[ -d "$ROOTPATH/support" ]        || die "Support directory is missing."
+
 [ ! -e "/etc/drunner/config.sh" ] || die "You have an old installation of drunner. Remove /etc/drunner and /usr/local/bin/drunner."
 [ ! -e "/usr/local/bin/drunner" ] || die "You have an old installation of drunner. Remove /etc/drunner and /usr/local/bin/drunner."
-[ -e "${ROOTPATH}/config.sh" ] || die "/etc/drunner/config.sh missing."
+[ -e "${ROOTPATH}/config.sh" ]    || die "${ROOTPATH}/config.sh missing."
 
 source "${ROOTPATH}/config.sh"
 
-[ -v ROOTPATH ]            || die "config.sh doesn't set ROOTPATH."
 [ -v PULLONUPDATE ]        || die "config.sh doesn't set PULLONUPDATE."
 [ -v SUPPORTIMAGE ]        || die "config.sh doesn't set SUPPORTIMAGE."
 [ -v DRUNNERINSTALLURL ]   || die "config.sh doesn't set DRUNNERINSTALLURL."
 [ -v DRUNNERINSTALLTIME ]  || die "config.sh doesn't set DRUNNERINSTALLTIME."
-[ -d "$ROOTPATH" ]         || die "$ROOTPATH doesn't exist."
 
 [ -e "${ROOTPATH}/support/buildtime.sh" ] || die "${ROOTPATH}/support/buildtime.sh is missing."
 
 source "${ROOTPATH}/support/buildtime.sh"
 
 [ -v SUPPORTBUILDTIME ]    || die "buildtime.sh doesn't set SUPPORTBUILDTIME." 
+
 
 exit 0

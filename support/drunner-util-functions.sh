@@ -221,5 +221,7 @@ function mktempd_drunner {
    [ -v ROOTPATH ] || die "ROOTPATH not set."
    local TEMPDIR="${ROOTPATH}/temp/install-support"
    [ -d "${TEMPDIR}" ] || mkdir -p "${TEMPDIR}" || die "Couldn't create $TEMPDIR"
-   mktemp -d -p ${TEMPDIR}
+   local TEMPDIR2=$(mktemp -d -p ${TEMPDIR})
+   chmod 0777 "$TEMPDIR2" || die "Couldn't change permission on $TEMPDIR2."
+   echo -n "$TEMPDIR2"
 }
