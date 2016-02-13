@@ -285,7 +285,7 @@ function processdRunnerCommands {
             dieusage "drunner recover SERVICENAME [IMAGENAME]"
          fi
          SERVICENAME="$1" ; shift
-         uninstallService || die "Couldn't uninstall old service"
+         uninstallService || echo "Uninstall had errors, but completed anyway."
 
          IMAGENAME=""
          loadServiceSilent
@@ -299,7 +299,7 @@ function processdRunnerCommands {
       uninstall)
          [ $# -eq 1 ] || dieusage "drunner uninstall SERVICENAME"
          SERVICENAME="$1"
-         uninstallService || die "${SERVICENAME} uninstalled, but there were errors."
+         uninstallService || echo "Uninstall had errors, but completed anyway."
          alldone "${SERVICENAME} uninstalled. Data retained. Install again to recover."
          ;;
 
