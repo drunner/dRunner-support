@@ -44,8 +44,8 @@ function install_createVolumes {
 # called by both install and SERVICE update.
 function recreateservice {   
    # the directory that the container will update.
-   if [ ! -v SERVICENAME ]; then die "SERVICENAME undefined." ; fi
-   if [ -d "${ROOTPATH}/services/${SERVICENAME}" ]; then rm -r "${ROOTPATH}/services/${SERVICENAME}" ; fi
+   [ -v SERVICENAME ] || die "SERVICENAME undefined."
+   [ ! -d "${ROOTPATH}/services/${SERVICENAME}" ] || rm -rf "${ROOTPATH}/services/${SERVICENAME}" || die "Could not remove old ${SERVICENAME}."
    mkdir -p "${ROOTPATH}/services/${SERVICENAME}/drunner"
 
    # we need the user id for the account that the image uses.
@@ -64,8 +64,6 @@ function recreateservice {
       rm -rf "${SERVICEPATH}"
       exit 1
    fi  
-   # tighten up permissions
-   docker run --rm -v "${ROOTPATH}/services/${SERVICENAME}:/s" drunner/baseimage-alpine bash -c "chown -R $EUID:${GROUPS[0]} /s ; chmod -R 0700 /s" || die "Couldn't change permissions for ${ROOTPATH}/services/${SERVICENAME}" 
    
    local DATESTAMP="$(TZ=Pacific/Auckland date -u +"%a, %d %b %Y %X %z")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
@@ -102,6 +100,9 @@ EOF
 # ${DATESTAMP}
 IMAGENAME="$IMAGENAME"
 EOF
+
+   # tidy up permissions
+   docker run --rm -v "${ROOTPATH}/services/${SERVICENAME}:/s" drunner/baseimage-alpine bash -c "chown -R $EUID:${GROUPS[0]} /s ; chmod -R 0700 /s" || die "Couldn't change permissions for ${ROOTPATH}/services/${SERVICENAME}" 
 }
 
 #------------------------------------------------------------------------------------

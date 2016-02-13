@@ -121,7 +121,7 @@ function updatedr {
    
    # run it to update the installation.
    bash "${TEMPDIR}/drunner-install"
-   rm -r "${TEMPDIR}"
+   rm -rf "${TEMPDIR}"
    
    # not safe to continue.
    exit 0
