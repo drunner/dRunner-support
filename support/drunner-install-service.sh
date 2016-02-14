@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 #------------------------------------------------------------------------------------
 
 # install_createlaunchscript
@@ -54,6 +55,9 @@ function recreateservice {
    
    # allow the container to write into this folder.
    chmod 0777 "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
+
+   # ensure we've got the latest master image for the dService.
+   [ "$PULLONUPDATE" -eq 0 ] || docker pull "${IMAGENAME}" || die "Unable to pull required Docker image ${IMAGENAME}."
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
    docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"                             
@@ -67,8 +71,15 @@ function recreateservice {
    local DATESTAMP="$(TZ=Pacific/Auckland date +"%a, %d %b %Y %X")" 
    local HOSTIP=$(ip route get 1 | awk '{print $NF;exit}') 
 
-   # loadServiceSilent gets the VOLUMES and related vars. We haven't finished creating it, so go silent!
+   # loadServiceSilent gets the VOLUMES and related vars. We haven't finished creating it, so can't validate (go silent).
    loadServiceSilent
+   
+   # now we can pull those extra volumes. EXTRACONTAINERS is an array, so only gets set if non-empty
+   if [ "$PULLONUPDATE" -eq 1 ] && [ -v EXTRACONTAINERS ]; then
+      for CONTNAME in "${EXTRACONTAINERS[@]}"; do
+         docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}." ; fi
+      done
+   fi
    
    # convert arrays to a string format suitable for later source'ing.
    array2string "${DOCKERVOLS[@]:-}" ;       STR_DOCKERVOLS="$ARRAYSTR"
@@ -113,26 +124,11 @@ EOF
 
 # updateservice - udpates the service.
 function updateservice {
-   "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" updatestart || die "Update failed (${SERVICENAME}'s updatestart failed)."
+   local SERVICERUNNER="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
 
-   # ensure we have the latest support image. Issue here in that we don't update any other
-   # images within the container.
-   if [ "$PULLONUPDATE" -eq 1 ]; then
-      docker pull "${IMAGENAME}"
-      if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${IMAGENAME}." ; fi
-      
-      # also pull any extra containers specified in the service's servicecfg.sh
-      if [ -v EXTRACONTAINERS ]; then
-         for CONTNAME in "${EXTRACONTAINERS[@]}"; do
-            docker pull "${CONTNAME}"
-            if [ "$?" -ne 0 ]; then die "Unable to pull required Docker image ${CONTNAME}." ; fi
-         done
-      fi
-         
-   fi
-   recreateservice
-   
-   "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" updateend || die "Update failed (${SERVICENAME}'s updateend failed)."
+   "$SERVICERUNNER" updatestart || die "Update failed (${SERVICENAME}'s updatestart failed)."
+   recreateservice   
+   "$SERVICERUNNER" updateend || die "Update failed (${SERVICENAME}'s updateend failed)."
    
    # validate
    "${ROOTPATH}/support/validator-service" "$SERVICENAME" || die "Update failed."

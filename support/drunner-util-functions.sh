@@ -239,3 +239,13 @@ function chownpath {
    # set ownership and permissions for those support files (don't rely on what's in the container).
    docker run --rm -v "$DPATH:/s" drunner/install-rootutils bash -c "$2" >/dev/null || die "chownpath command failed: $2"
 }
+
+#------------------------------------------------------------------------------------
+
+function imageNameisDev {
+   [ -v IMAGENAME ] || die "IMAGENAME not set in imageNameisDev."
+   [ -n "$IMAGENAME" ] || die "IMAGENAME is empty string in imageNameisDev."
+   
+   [[ $IMAGENAME == *":dev" ]]
+}
+

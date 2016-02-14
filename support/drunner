@@ -161,6 +161,7 @@ function showservicehelp {
 
 #------------------------------------------------------------------------------------
 
+# also loads the service, setting IMAGENAME, VOLUMES etc.
 function setServiceName {
    [ "$#" -gt 0 ] || { showusage ; die "drunner $DCOMMAND requires the SERVICENAME." ; }
    SERVICENAME="$1"
