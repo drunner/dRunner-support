@@ -22,8 +22,6 @@ function backup {
       local TEMPPARENT="${TEMPROOT}/backup"
       local TEMPF="${TEMPPARENT}/drbackup"
       mkdir -p "$TEMPF"
-      local TEMPC="${TEMPPARENT}/containerbackup"
-      mkdir -p "$TEMPC"
       
       # output variables needed for restore to the tempparent folder
       STR_DOCKERVOLS=""
@@ -37,8 +35,12 @@ EOF
       # call through to container to backup anything there in a subfolder.
       # important this is called before backing up any volume containers, as
       # it might put stuff in them.
-      local USERID=$(getUSERID "$IMAGENAME")
-      chownpath "${TEMPC}" "chown $USERID" || die "Couldn't change ownership to $USERID for ${TEMPC}."
+      local TEMPC="${TEMPPARENT}/containerbackup"
+      mkdir -p "$TEMPC"
+      # Need to allow both our EUID on the host and the containers USERID full access to the $TEMPC folder.
+      # The dService's backup action is run on the host with possible bits run in the container. 
+      # The host EUID can vary (e.g. backup and restore might be different) so we use 0777.
+      chmod 0777 "$TEMPC" || die "Couldn't change permissions for ${TEMPC}."
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
                   
       # back up our volume containers
@@ -126,8 +128,8 @@ function restore {
       
       # call through to container to restore its backup in TEMPC. Imporant this is the last step,
       # so it can use any docker volumes, the variables.sh file etc.
-      local USERID=$(getUSERID "$IMAGENAME")
-      chownpath "${TEMPC}" "chown $USERID" || die "Couldn't change ownership to $USERID for ${TEMPC}."
+      #local USERID=$(getUSERID "$IMAGENAME")
+      #chownpath "${TEMPC}" "chown $USERID /s" || die "Couldn't change ownership to $USERID for ${TEMPC}."
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" restore "$TEMPC"
    )
    RVAL="$?"
