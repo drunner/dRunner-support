@@ -77,7 +77,7 @@ function recreateservice {
    # now we can pull those extra volumes. EXTRACONTAINERS is an array, so only gets set if non-empty
    if [ "$PULLONUPDATE" -eq 1 ] && [ -v EXTRACONTAINERS ]; then
       for CONTNAME in "${EXTRACONTAINERS[@]}"; do
-         docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}." ; fi
+         docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}."
       done
    fi
    

@@ -313,7 +313,11 @@ function processdRunnerCommands {
          SERVICENAME="$1"
          obliterateService || die "${SERVICENAME} obliterated, but there were errors."
          alldone "${SERVICENAME} and its containers obliterated - all data destroyed."
-         ;;        
+         ;;    
+         
+      unittests)
+         test-imageNameisDev
+         ;;    
    esac  
 }
 

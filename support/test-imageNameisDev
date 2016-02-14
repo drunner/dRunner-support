@@ -1,12 +1,8 @@
 #!/bin/bash
 set -o nounset
 
-TESTDIR=$( dirname "$(readlink -f "$0")" )
-ISDIR=$(realpath "$TESTDIR/../" | tr -d '\r\n')
-
-source "$ISDIR/support/drunner-util-functions.sh"
-
-
+SUPPORTDIR=$( dirname "$(readlink -f "$0")" )
+source "$SUPPORTDIR/drunner-util-functions.sh"
 
 function upline { echo -en "\e[1A">&2 ; }
 function clipprint {

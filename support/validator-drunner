@@ -59,5 +59,4 @@ source "${ROOTPATH}/support/buildtime.sh"
 
 [ -v SUPPORTBUILDTIME ]    || die "buildtime.sh doesn't set SUPPORTBUILDTIME." 
 
-
 exit 0
