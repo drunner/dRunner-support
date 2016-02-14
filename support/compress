@@ -42,7 +42,7 @@ TEMPDIR="$(mktempd_drunner)"
 # compress as root so we can preserve owner/permissions.
 docker run -i -t --name="dr_compress" -e "PASS=${PASS}" \
             -v "${SOURCE}:/src" -v "${TEMPDIR}:/dst" drunner/install-rootutils \
-            bash -c "dr_compress ${ARCHIVENAME} && chown $EUID:${GROUPS[0]} ${ARCHIVENAME}"
+            bash -c "dr_compress ${ARCHIVENAME} && chown $EUID:${GROUPS[0]} /dst/${ARCHIVENAME}"
 RVAL=$?
 docker rm "dr_compress" >/dev/null 2>&1
 
