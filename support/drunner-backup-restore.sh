@@ -37,8 +37,8 @@ EOF
       # call through to container to backup anything there in a subfolder.
       # important this is called before backing up any volume containers, as
       # it might put stuff in them.
-      getUSERID "$IMAGENAME"
-      chown "${USERID}" "${TEMPC}" || die "Couldn't change ownership to $USERID for ${TEMPC}."
+      local USERID=$(getUSERID "$IMAGENAME")
+      chownpath "${TEMPC}" "chown $USERID" || die "Couldn't change ownership to $USERID for ${TEMPC}."
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" backupstart "$TEMPC"
                   
       # back up our volume containers
@@ -105,7 +105,7 @@ function restore {
       installservice
       )
       RVAL="$?"
-      if [ $RVAL -ne 0 ]; then echo "Fail on install - aborting.">&2 ; exit $RVAL ; fi
+      [ $RVAL -eq 0 ] || { echo "Fail on install - aborting.">&2 ; exit $RVAL ; }
       
       # load DOCKERVOLS etc so we can restore the volumes.
       validateLoadService
@@ -126,6 +126,8 @@ function restore {
       
       # call through to container to restore its backup in TEMPC. Imporant this is the last step,
       # so it can use any docker volumes, the variables.sh file etc.
+      local USERID=$(getUSERID "$IMAGENAME")
+      chownpath "${TEMPC}" "chown $USERID" || die "Couldn't change ownership to $USERID for ${TEMPC}."
       "${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner" restore "$TEMPC"
    )
    RVAL="$?"

@@ -79,6 +79,9 @@ VERSION
 
    drunner-support: ${SUPPORTBUILDTIME}
                     ${SUPPORTIMAGE}
+
+LOCATION
+   $ROOTPATH
                        
 SYNOPSIS
    drunner clean
@@ -121,8 +124,9 @@ function updatedr {
    local TEMPDIR="$(mktempd_drunner)"
    ( # subshell so we can be sure we remove the temp folder.
       echo "Downloading from $DRUNNERINSTALLURL"
-      docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "${SUPPORTIMAGE}" \
-         bash -c "wget --no-cache -nv -O /tempdir/drunner-install ${DRUNNERINSTALLURL}" >/dev/null
+      local TRGT="/tempdir/drunner-install"
+      docker run -it --name="drunner-downloadfile" -v "${TEMPDIR}:/tempdir" "drunner/install-rootutils" \
+         bash -c "wget --no-cache -nv -O $TRGT ${DRUNNERINSTALLURL} && chmod 0555 $TRGT" >/dev/null
       local RVAL="$?"
       docker rm "drunner-downloadfile" >/dev/null 2>&1
 
@@ -130,7 +134,7 @@ function updatedr {
       [ -e "${TEMPDIR}/drunner-install" ] || die "drunner-install mysteriously missing."
 
       # run it to update the installation.
-      bash "${TEMPDIR}/drunner-install" "$ROOTPATH" || die "dRunner update failed (drunner-install script failed)"
+      "${TEMPDIR}/drunner-install" "$ROOTPATH" || die "dRunner update failed (drunner-install script failed)"
    )
    local RVAL=$? 
    

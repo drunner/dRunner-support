@@ -18,6 +18,10 @@ EOF
 function install_createVolumes {
    # create the necessary volume containers.
    local DNAME="dr-install-volcreate"
+
+   # we need the user id for the account that the image uses.
+   local USERID=$(getUSERID "$IMAGENAME")
+   if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
    
    if [ -v VOLUMES ]; then
       for i in "${!DOCKERVOLS[@]}"; do      
@@ -47,14 +51,9 @@ function recreateservice {
    [ -v SERVICENAME ] || die "SERVICENAME undefined."
    [ ! -d "${ROOTPATH}/services/${SERVICENAME}" ] || rm -rf "${ROOTPATH}/services/${SERVICENAME}" || die "Could not remove old ${SERVICENAME}."
    mkdir -p "${ROOTPATH}/services/${SERVICENAME}/drunner"
-
-   # we need the user id for the account that the image uses.
-   getUSERID "$IMAGENAME"
-   if [ -z "$USERID" ] || [ "${USERID}" -eq 0 ]; then die "Internal error - USERID for image is not a normal user." ; fi
-
+   
    # allow the container to write into this folder.
-   chmod a+rwx "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
-   #chown "${USERID}" "${ROOTPATH}/services/${SERVICENAME}/drunner"
+   chmod 0777 "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
    
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
    docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"                             
@@ -107,7 +106,7 @@ IMAGENAME="$IMAGENAME"
 EOF
 
    # tidy up permissions
-   docker run --rm -v "${ROOTPATH}/services/${SERVICENAME}:/s" drunner/baseimage-alpine bash -c "chown -R $EUID:${GROUPS[0]} /s ; chmod -R 0700 /s" || die "Couldn't change permissions for ${ROOTPATH}/services/${SERVICENAME}" 
+   chownpath "${ROOTPATH}/services/${SERVICENAME}" "chown -R $EUID:${GROUPS[0]} /s && chmod -R 0700 /s"
 }
 
 #------------------------------------------------------------------------------------

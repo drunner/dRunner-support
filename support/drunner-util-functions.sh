@@ -48,10 +48,10 @@ function volexists {
 
 # getUSERID IMAGENAME
 # get the ID of the user running in a docker container.
+# use:        local USERID=$(getUSERID "$IMAGENAME")
 function getUSERID {
    if [ -z "$1" ]; then die "getUSERID: requires IMAGENAME passed as first argument."; fi
-   USERID=$(docker run --rm -it "${1}" /bin/bash -c "id -u | tr -d '\r\n'")
-   if [ $? -ne 0 ]; then die "getUSERID: Docker image ${1} does not exist." ; fi
+   docker run --rm -it "${1}" /bin/bash -c "id -u | tr -d '\r\n'" || die "getUSERID: Couldn't run ${1} to get user ID."
 }
 
 #------------------------------------------------------------------------------------
@@ -224,4 +224,18 @@ function mktempd_drunner {
    local TEMPDIR2=$(mktemp -d -p ${TEMPDIR})
    chmod 0777 "$TEMPDIR2" || die "Couldn't change permission on $TEMPDIR2."
    echo -n "$TEMPDIR2"
+}
+
+
+#------------------------------------------------------------------------------------
+
+# chownpath
+# use:   chownpath PATH CMD   with path mapped to /s
+# e.g.:  chownpath "$ROOTPATH/support" "chown -R $EUID:${GROUPS[0]} /s && chmod -R 0500 /s" 
+function chownpath {
+   [ $# -eq 2 ] || die "chownpath called with incorrect number of arguments."
+   local DPATH="$1"
+   [ -d $DPATH ] || die "chownpath called with non-existant path $DPATH"
+   # set ownership and permissions for those support files (don't rely on what's in the container).
+   docker run --rm -v "$DPATH:/s" drunner/install-rootutils bash -c "$2" >/dev/null || die "chownpath command failed: $2"
 }
