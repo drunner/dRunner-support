@@ -212,7 +212,7 @@ function processServiceCommands {
             SCRIPTTORUN="${ROOTPATH}/services/${SERVICENAME}/drunner/servicerunner"
             SUBCOMMAND="$1" ; shift
             [ -e "${SCRIPTTORUN}" ] || die "${SERVICENAME} is broken. Try ${CODE_S}drunner recover ${SERVICENAME}${CODE_E}"
-            "${SCRIPTTORUN}" "$SUBCOMMAND" "$@" || die "$SUBCOMMAND failed."
+            "${SCRIPTTORUN}" "$SUBCOMMAND" "$@" || die "${SERVICENAME} $SUBCOMMAND $@ failed."
             alldone "${SERVICENAME} $SUBCOMMAND $@ complete."
          fi
          ;;
