@@ -57,7 +57,7 @@ function recreateservice {
    chmod 0777 "${ROOTPATH}/services/${SERVICENAME}/drunner" || die "Couldn't change owner of drunner service directory."
 
    # ensure we've got the latest master image for the dService.
-   imageIsDev "$IMAGENAME" || docker pull "${IMAGENAME}" || die "Unable to pull required Docker image ${IMAGENAME}."
+   imageIsBranch "$IMAGENAME" || docker pull "${IMAGENAME}" || die "Unable to pull required Docker image ${IMAGENAME}."
 
    # assumes docker image does not use entrypoint. Could instead override entrypoint maybe.
    docker run --rm -it -v "${ROOTPATH}/services/${SERVICENAME}/drunner:/tempcopy" "${IMAGENAME}" /bin/bash -c "cp -r /drunner/* /tempcopy/"
@@ -77,7 +77,7 @@ function recreateservice {
    # now we can pull those extra volumes. EXTRACONTAINERS is an array, so only gets set if non-empty
    if [ -v EXTRACONTAINERS ]; then
       for CONTNAME in "${EXTRACONTAINERS[@]}"; do
-         imageIsDev "$CONTNAME" || docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}."
+         imageIsBranch "$CONTNAME" || docker pull "${CONTNAME}" || die "Unable to pull required Docker image ${CONTNAME}."
       done
    fi
 

@@ -14,15 +14,15 @@ function passmsg { upline ; clipprint "\e[32m\u2714\e[0m" "$PFMSG" ; }
 function failmsg { upline ; clipprint "\e[31m\e[1m\u2718\e[0m" "$PFMSG" ; }
 
 
-
+#
 function test0 {
-   checkingmsg "imageNameisDev for \"$IMAGENAME\" should be true."
-   ( imageNameisDev >/dev/null 2>&1 ) || { failmsg ; ((++ERRS)) ; return 1 ; } 
+   checkingmsg "imageIsBranch for \"$IMAGENAME\" should be true."
+   ( imageIsBranch $IMAGENAME >/dev/null 2>&1 ) || { failmsg ; ((++ERRS)) ; return 1 ; }
    passmsg
 }
 function test1 {
-   checkingmsg "imageNameisDev for \"$IMAGENAME\" should be false."
-   ! ( imageNameisDev >/dev/null 2>&1 )  || { failmsg ; ((++ERRS)) ; return 1 ; } 
+   checkingmsg "imageIsBranch for \"$IMAGENAME\" should be false."
+   ! ( imageIsBranch $IMAGENAME >/dev/null 2>&1 )  || { failmsg ; ((++ERRS)) ; return 1 ; }
    passmsg
 }
 
@@ -31,9 +31,9 @@ ERRS=0
 IMAGENAME="dave" ; test1
 IMAGENAME="drunner/dave" ; test1
 IMAGENAME="drunner/dave:dev" ; test0
-IMAGENAME="drunner/dave:odev" ; test1
-IMAGENAME="drunner/dave:devo" ; test1
-IMAGENAME="davedev" ; test1
+IMAGENAME="drunner/dave:omaster" ; test0
+IMAGENAME="drunner/dave:mastero" ; test0
+IMAGENAME="davemaster" ; test1
 IMAGENAME="dave:dev" ; test0
 IMAGENAME=":dev" ; test0
 IMAGENAME="" ; test1
