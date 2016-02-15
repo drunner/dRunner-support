@@ -242,11 +242,10 @@ function chownpath {
 
 #------------------------------------------------------------------------------------
 
-# imageNameisDev
-# user:   if imageIsDev IMAGENAME ; then ....
-function imageIsDev {
+# imageIsBranch
+# user:   if imageIsBranch IMAGENAME ; then ....
+function imageIsBranch {
    local IMAGEN="${1:-""}"
-   [ -n "$IMAGEN" ] || die "IMAGENAME is empty string in imageNameisDev."
-
-   [[ $IMAGEN == *":dev" ]]
+   [ -n "$IMAGEN" ] || die "IMAGENAME is empty string in imageIsBranch."
+   [[ $IMAGEN != *":master" && $IMAGEN == *":"* ]]
 }
